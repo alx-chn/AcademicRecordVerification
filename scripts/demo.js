@@ -25,14 +25,14 @@ async function main() {
   console.log("Step 1: Demonstrating Owner Access Control");
   console.log("-------------------------------------------");
   
-  console.log("OWNER ACTIONS (allowed):");
+  console.log(`OWNER ACTIONS (allowed for address ${owner.address}):`);
   // Authorize first institution
   const tx1 = await contract.authorizeInstitution(
     institution1.address,
     "Hong Kong University"
   );
   await tx1.wait();
-  console.log("✓ Owner successfully authorized Institution 1 (HKU)");
+  console.log(`✓ Owner (${owner.address}) successfully authorized Institution 1 (${institution1.address}) as HKU`);
   
   // Authorize second institution
   const tx2 = await contract.authorizeInstitution(
@@ -40,25 +40,26 @@ async function main() {
     "City University of Hong Kong"
   );
   await tx2.wait();
-  console.log("✓ Owner successfully authorized Institution 2 (CityU)");
+  console.log(`✓ Owner (${owner.address}) successfully authorized Institution 2 (${institution2.address}) as CityU`);
 
-  console.log("\nNON-OWNER ACTIONS (should fail):");
+  console.log(`\nNON-OWNER ACTIONS (should fail when attempted by ${institution1.address}):`);
   try {
     // Try to authorize from non-owner account
     await contract.connect(institution1).authorizeInstitution(
       student1.address,
       "Fake University"
     );
-    console.log("❌ Non-owner was able to authorize an institution (this shouldn't happen)");
+    console.log(`❌ Non-owner (${institution1.address}) was able to authorize an institution (this shouldn't happen)`);
   } catch (error) {
-    console.log("✓ Non-owner correctly prevented from authorizing institutions");
+    console.log(`✓ Non-owner (${institution1.address}) correctly prevented from authorizing institutions`);
+    console.log(`  Error message: "${error.message.split('\n')[0]}"`);
   }
 
   // Step 2: Demonstrate Institution Access Control
   console.log("\nStep 2: Demonstrating Institution Access Control");
   console.log("----------------------------------------------");
   
-  console.log("AUTHORIZED INSTITUTION ACTIONS (allowed):");
+  console.log(`AUTHORIZED INSTITUTION ACTIONS (allowed for address ${institution1.address}):`);
   // Institution 1 issues a certificate
   const tx3 = await contract.connect(institution1).issueCertificate(
     "John Doe",
@@ -84,10 +85,10 @@ async function main() {
   const parsedEvent1 = contract.interface.parseLog(event1);
   const certificateId1 = parsedEvent1.args[0];
   
-  console.log(`✓ Authorized Institution (HKU) successfully issued certificate to John Doe`);
+  console.log(`✓ Authorized Institution HKU (${institution1.address}) successfully issued certificate to John Doe`);
   console.log(`  Certificate ID: ${certificateId1}`);
   
-  console.log("\nUNAUTHORIZED ACCOUNTS ACTIONS (should fail):");
+  console.log(`\nUNAUTHORIZED ACCOUNTS ACTIONS (should fail when attempted by ${student1.address}):`);
   try {
     // Student tries to issue a certificate
     await contract.connect(student1).issueCertificate(
@@ -99,9 +100,10 @@ async function main() {
       "2023-01-02",
       400
     );
-    console.log("❌ Unauthorized account was able to issue a certificate (this shouldn't happen)");
+    console.log(`❌ Unauthorized account (${student1.address}) was able to issue a certificate (this shouldn't happen)`);
   } catch (error) {
-    console.log("✓ Unauthorized account correctly prevented from issuing certificates");
+    console.log(`✓ Unauthorized account (${student1.address}) correctly prevented from issuing certificates`);
+    console.log(`  Error message: "${error.message.split('\n')[0]}"`);
   }
 
   // Institution 2 issues a certificate
@@ -129,7 +131,7 @@ async function main() {
   const parsedEvent2 = contract.interface.parseLog(event2);
   const certificateId2 = parsedEvent2.args[0];
   
-  console.log(`✓ Authorized Institution (CityU) successfully issued certificate to Jane Smith`);
+  console.log(`✓ Authorized Institution CityU (${institution2.address}) successfully issued certificate to Jane Smith`);
   console.log(`  Certificate ID: ${certificateId2}`);
 
   // Step 3: Public Access - Verifying Certificates
@@ -139,42 +141,43 @@ async function main() {
   console.log("PUBLIC VERIFICATION (allowed for anyone):");
   // Verify certificates as owner
   const verification1 = await contract.verifyCertificate(certificateId1);
-  console.log("Verification by Owner:");
+  console.log(`Verification by Owner (${owner.address}):`);
   console.log(`✓ Can verify: Certificate is ${verification1.isValid ? 'valid' : 'invalid'} from ${verification1.institutionName}`);
   
   // Verify certificates as institution
   const verification2 = await contract.connect(institution1).verifyCertificate(certificateId2);
-  console.log("\nVerification by Institution:");
+  console.log(`\nVerification by Institution HKU (${institution1.address}):`);
   console.log(`✓ Can verify: Certificate is ${verification2.isValid ? 'valid' : 'invalid'} from ${verification2.institutionName}`);
   
   // Verify certificates as student
   const verification3 = await contract.connect(student1).verifyCertificate(certificateId1);
-  console.log("\nVerification by Student/Public:");
+  console.log(`\nVerification by Student/Public (${student1.address}):`);
   console.log(`✓ Can verify: Certificate is ${verification3.isValid ? 'valid' : 'invalid'} from ${verification3.institutionName}`);
 
   // Step 4: Certificate Issuer Access Control
   console.log("\nStep 4: Demonstrating Certificate Issuer Access Control");
   console.log("----------------------------------------------------");
   
-  console.log("CERTIFICATE ISSUER ACTIONS (allowed):");
+  console.log(`CERTIFICATE ISSUER ACTIONS (allowed for issuing institution ${institution1.address}):`);
   // Institution 1 revokes its own certificate
   const tx5 = await contract.connect(institution1).revokeCertificate(
     certificateId1,
     "Academic misconduct discovered"
   );
   await tx5.wait();
-  console.log(`✓ Institution (HKU) successfully revoked its own certificate`);
+  console.log(`✓ Institution HKU (${institution1.address}) successfully revoked its own certificate`);
   
-  console.log("\nNON-ISSUER ACTIONS (should fail):");
+  console.log(`\nNON-ISSUER ACTIONS (should fail when attempted by ${institution2.address}):`);
   try {
     // Institution 2 tries to revoke Institution 1's certificate
     await contract.connect(institution2).revokeCertificate(
       certificateId1,
       "Attempting unauthorized revocation"
     );
-    console.log("❌ Non-issuer was able to revoke certificate (this shouldn't happen)");
+    console.log(`❌ Non-issuer CityU (${institution2.address}) was able to revoke certificate (this shouldn't happen)`);
   } catch (error) {
-    console.log("✓ Non-issuer correctly prevented from revoking other institution's certificates");
+    console.log(`✓ Non-issuer CityU (${institution2.address}) correctly prevented from revoking other institution's certificates`);
+    console.log(`  Error message: "${error.message.split('\n')[0]}"`);
   }
 
   // Step 5: Owner Revoking Institutions
@@ -184,18 +187,36 @@ async function main() {
   // Owner revokes Institution 2
   const tx6 = await contract.revokeInstitution(institution2.address);
   await tx6.wait();
-  console.log(`✓ Owner successfully revoked Institution (CityU)`);
+  console.log(`✓ Owner (${owner.address}) successfully revoked Institution CityU (${institution2.address})`);
   
   // Verify Jane's certificate now that the institution is revoked
   const verification4 = await contract.verifyCertificate(certificateId2);
   console.log("\nVerification of certificate after institution revocation:");
-  console.log(`✓ Certificate is now ${verification4.isValid ? 'valid' : 'invalid'} (should be invalid)`);
+  console.log(`✓ Certificate issued by CityU is now ${verification4.isValid ? 'valid' : 'invalid'} (should be invalid)`);
+  
+  // Try to authorize a revoked institution
+  try {
+    // Institution 2 tries to issue a certificate after being revoked
+    await contract.connect(institution2).issueCertificate(
+      "Another Student",
+      "S999999",
+      "Doctorate",
+      "Physics",
+      "2023-07-01",
+      "2023-07-30",
+      400
+    );
+    console.log(`❌ Revoked institution CityU (${institution2.address}) was able to issue a certificate (this shouldn't happen)`);
+  } catch (error) {
+    console.log(`✓ Revoked institution CityU (${institution2.address}) correctly prevented from issuing certificates`);
+    console.log(`  Error message: "${error.message.split('\n')[0]}"`);
+  }
   
   console.log("\nDemonstration completed successfully!");
   console.log("The system has demonstrated proper access control for all roles:");
-  console.log("1. Owner: Can authorize and revoke institutions");
-  console.log("2. Institutions: Can issue and revoke their own certificates");
-  console.log("3. Public: Can verify any certificate");
+  console.log(`1. Owner (${owner.address}): Can authorize and revoke institutions`);
+  console.log(`2. Institutions (${institution1.address}, ${institution2.address}): Can issue and revoke their own certificates`);
+  console.log(`3. Public (${student1.address}): Can verify any certificate`);
   console.log("4. Proper restrictions: Non-owners can't authorize, non-issuers can't revoke others' certificates");
 }
 

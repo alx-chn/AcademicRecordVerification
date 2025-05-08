@@ -42,11 +42,12 @@ console.log("Student:", student1.address);
 
 ```javascript
 // Authorize an institution
-await contract.authorizeInstitution(
+const authTx = await contract.authorizeInstitution(
   institution1.address, 
   "Hong Kong University"
 );
-console.log("Institution authorized");
+await authTx.wait();
+console.log("Institution authorized successfully");
 
 // Check if institution is authorized
 const inst = await contract.authorizedInstitutions(institution1.address);
@@ -65,7 +66,7 @@ console.log("Institution revoked");
 const instContract = contract.connect(institution1);
 
 // Issue a certificate
-const tx = await instContract.issueCertificate(
+const issueTx = await instContract.issueCertificate(
   "John Doe",
   "S123456",
   "Bachelor of Science",
@@ -74,26 +75,39 @@ const tx = await instContract.issueCertificate(
   "2023-06-30",
   385 // GPA 3.85
 );
-const receipt = await tx.wait();
+const issueReceipt = await issueTx.wait();
+console.log("Certificate issued, receipt:", issueReceipt.hash);
 
-// Extract certificate ID from event
-const event = receipt.logs.find(log => {
+// Find the certificate ID from events
+// Using a different approach to extract the certificate ID from logs
+const certEvents = issueReceipt.logs.map(log => {
   try {
-    return contract.interface.parseLog(log).name === "CertificateIssued";
+    return contract.interface.parseLog(log);
   } catch (e) {
-    return false;
+    return null;
   }
-});
-const parsedEvent = contract.interface.parseLog(event);
-const certificateId = parsedEvent.args[0];
-console.log("Certificate ID:", certificateId);
+}).filter(parsed => parsed !== null && parsed.name === "CertificateIssued");
 
-// Revoke a certificate
-await instContract.revokeCertificate(
-  certificateId,
-  "Academic misconduct"
-);
-console.log("Certificate revoked");
+if (certEvents.length > 0) {
+  const certificateId = certEvents[0].args[0];
+  console.log("Certificate ID:", certificateId);
+  
+  // Verify the certificate
+  const verification = await contract.verifyCertificate(certificateId);
+  console.log("Certificate valid:", verification.isValid);
+  console.log("Issuing institution:", verification.institutionName);
+  
+  // Revoke certificate
+  const revokeTx = await instContract.revokeCertificate(certificateId, "Academic misconduct");
+  await revokeTx.wait();
+  console.log("Certificate revoked successfully");
+  
+  // Verify again to confirm revocation
+  const verificationAfter = await contract.verifyCertificate(certificateId);
+  console.log("Certificate still valid:", verificationAfter.isValid); // Should be false
+} else {
+  console.log("Certificate event not found in logs");
+}
 ```
 
 ### As Anyone (Public Verification)
