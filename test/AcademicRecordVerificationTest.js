@@ -23,11 +23,15 @@ describe("AcademicRecordVerification", function () {
 
   describe("Institution Management", function () {
     it("Should allow owner to authorize institutions", async function () {
-      await expect(
-        academicRecordVerification.authorizeInstitution(institution1.address, institutionName1)
-      )
-        .to.emit(academicRecordVerification, "InstitutionAuthorized")
-        .withArgs(institution1.address, institutionName1);
+      const tx = await academicRecordVerification.authorizeInstitution(institution1.address, institutionName1);
+      await tx.wait();
+      
+      // Check event manually
+      const filter = academicRecordVerification.filters.InstitutionAuthorized();
+      const events = await academicRecordVerification.queryFilter(filter);
+      expect(events.length).to.equal(1);
+      expect(events[0].args[0]).to.equal(institution1.address);
+      expect(events[0].args[1]).to.equal(institutionName1);
 
       const institution = await academicRecordVerification.authorizedInstitutions(institution1.address);
       expect(institution.name).to.equal(institutionName1);
@@ -37,20 +41,26 @@ describe("AcademicRecordVerification", function () {
     it("Should allow owner to revoke institutions", async function () {
       await academicRecordVerification.authorizeInstitution(institution1.address, institutionName1);
       
-      await expect(
-        academicRecordVerification.revokeInstitution(institution1.address)
-      )
-        .to.emit(academicRecordVerification, "InstitutionRevoked")
-        .withArgs(institution1.address);
+      const tx = await academicRecordVerification.revokeInstitution(institution1.address);
+      await tx.wait();
+      
+      // Check event manually
+      const filter = academicRecordVerification.filters.InstitutionRevoked();
+      const events = await academicRecordVerification.queryFilter(filter);
+      expect(events.length).to.equal(1);
+      expect(events[0].args[0]).to.equal(institution1.address);
 
       const institution = await academicRecordVerification.authorizedInstitutions(institution1.address);
       expect(institution.isAuthorized).to.equal(false);
     });
 
     it("Should not allow non-owners to authorize institutions", async function () {
-      await expect(
-        academicRecordVerification.connect(institution1).authorizeInstitution(institution2.address, institutionName2)
-      ).to.be.reverted;
+      try {
+        await academicRecordVerification.connect(institution1).authorizeInstitution(institution2.address, institutionName2);
+        expect.fail("Expected transaction to revert");
+      } catch (error) {
+        expect(error.message).to.include("reverted");
+      }
     });
   });
 
@@ -73,33 +83,28 @@ describe("AcademicRecordVerification", function () {
 
       // Get the certificate ID from the event
       const receipt = await tx.wait();
-      const event = receipt.logs.find(log => {
-        try {
-          return academicRecordVerification.interface.parseLog(log).name === "CertificateIssued";
-        } catch (e) {
-          return false;
-        }
-      });
+      const events = await academicRecordVerification.queryFilter(
+        academicRecordVerification.filters.CertificateIssued(),
+        receipt.blockHash
+      );
       
-      if (!event) throw new Error("CertificateIssued event not found");
-      
-      const parsedEvent = academicRecordVerification.interface.parseLog(event);
-      certificateId = parsedEvent.args[0];
+      expect(events.length).to.be.greaterThan(0);
+      certificateId = events[0].args[0];
 
       // Verify certificate details
       const certificate = await academicRecordVerification.getCertificate(certificateId);
       expect(certificate.studentName).to.equal("John Doe");
       expect(certificate.degree).to.equal("Bachelor of Science");
       expect(certificate.major).to.equal("Computer Science");
-      expect(certificate.grade).to.equal(385);
+      expect(Number(certificate.grade)).to.equal(385); // Convert BigInt to Number
       expect(certificate.isRevoked).to.equal(false);
       expect(certificate.issuingInstitution).to.equal(institution1.address);
       expect(certificate.institutionName).to.equal(institutionName1);
     });
 
     it("Should not allow unauthorized institutions to issue certificates", async function () {
-      await expect(
-        academicRecordVerification.connect(institution2).issueCertificate(
+      try {
+        await academicRecordVerification.connect(institution2).issueCertificate(
           "Jane Smith",
           "S789012",
           "Master of Business Administration",
@@ -107,8 +112,11 @@ describe("AcademicRecordVerification", function () {
           "2023-06-15",
           "2023-06-30",
           400
-        )
-      ).to.be.revertedWith("Only authorized institutions can issue certificates");
+        );
+        expect.fail("Expected transaction to revert");
+      } catch (error) {
+        expect(error.message).to.include("Only authorized institutions can issue certificates");
+      }
     });
   });
 
@@ -130,18 +138,13 @@ describe("AcademicRecordVerification", function () {
       
       // Get certificate ID
       const receipt = await tx.wait();
-      const event = receipt.logs.find(log => {
-        try {
-          return academicRecordVerification.interface.parseLog(log).name === "CertificateIssued";
-        } catch (e) {
-          return false;
-        }
-      });
+      const events = await academicRecordVerification.queryFilter(
+        academicRecordVerification.filters.CertificateIssued(),
+        receipt.blockHash
+      );
       
-      if (!event) throw new Error("CertificateIssued event not found");
-      
-      const parsedEvent = academicRecordVerification.interface.parseLog(event);
-      certificateId = parsedEvent.args[0];
+      expect(events.length).to.be.greaterThan(0);
+      certificateId = events[0].args[0];
     });
 
     it("Should verify valid certificates", async function () {
@@ -154,11 +157,16 @@ describe("AcademicRecordVerification", function () {
     it("Should allow institutions to revoke their issued certificates", async function () {
       const reason = "Academic misconduct";
       
-      await expect(
-        academicRecordVerification.connect(institution1).revokeCertificate(certificateId, reason)
-      )
-        .to.emit(academicRecordVerification, "CertificateRevoked")
-        .withArgs(certificateId, institution1.address, reason);
+      const tx = await academicRecordVerification.connect(institution1).revokeCertificate(certificateId, reason);
+      await tx.wait();
+      
+      // Check event manually
+      const filter = academicRecordVerification.filters.CertificateRevoked();
+      const events = await academicRecordVerification.queryFilter(filter);
+      expect(events.length).to.equal(1);
+      expect(events[0].args[0]).to.equal(certificateId);
+      expect(events[0].args[1]).to.equal(institution1.address);
+      expect(events[0].args[2]).to.equal(reason);
       
       // Check certificate is revoked
       const certificate = await academicRecordVerification.getCertificate(certificateId);
@@ -173,9 +181,12 @@ describe("AcademicRecordVerification", function () {
     it("Should not allow non-issuing institutions to revoke certificates", async function () {
       await academicRecordVerification.authorizeInstitution(institution2.address, institutionName2);
       
-      await expect(
-        academicRecordVerification.connect(institution2).revokeCertificate(certificateId, "Attempted fraud")
-      ).to.be.revertedWith("Only the issuing institution can revoke this certificate");
+      try {
+        await academicRecordVerification.connect(institution2).revokeCertificate(certificateId, "Attempted fraud");
+        expect.fail("Expected transaction to revert");
+      } catch (error) {
+        expect(error.message).to.include("Only the issuing institution can revoke this certificate");
+      }
     });
 
     it("Should invalidate certificates when institution is revoked", async function () {

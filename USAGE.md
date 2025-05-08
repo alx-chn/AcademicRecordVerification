@@ -51,7 +51,7 @@ node scripts/update-address.js 0xYourContractAddress
 
 ```bash
 # Run the demonstration
-node scripts/run-demo.js
+npx hardhat run scripts/demo.js --network localhost
 ```
 
 This demonstration shows:
@@ -60,20 +60,74 @@ This demonstration shows:
 3. Failed operations for unauthorized parties
 4. The complete workflow of issuing, verifying, and revoking certificates
 
-## Interactive Console Usage
+## Role-Based Script Usage
 
-For manual interaction with the contract, use the Hardhat console:
+Instead of an interactive console, you can use our role-based scripts to perform specific actions:
+
+### Owner Actions
+
+As the system owner, you can authorize and revoke educational institutions:
 
 ```bash
-# Start the console
-npx hardhat console --network localhost
+# Run owner actions script
+npx hardhat run scripts/owner-actions.js --network localhost
 ```
 
-See the [Interactive Console Guide](./scripts/console-guide.md) for detailed examples of:
-- Connecting to your contract
-- Performing operations as different users (owner, institution, student)
-- Testing access control
-- Executing all contract functions
+This script demonstrates:
+- Authorizing new educational institutions
+- Viewing institution details
+- Revoking institution access
+
+### Institution Actions
+
+As an authorized educational institution, you can issue and manage certificates:
+
+```bash
+# Run institution actions script
+npx hardhat run scripts/institution-actions.js --network localhost
+```
+
+This script demonstrates:
+- Issuing new academic certificates
+- Viewing certificate details
+- Revoking certificates for valid reasons
+- Access control limitations for non-issuing institutions
+
+### Public Verification
+
+Anyone can verify certificates using the public verification script:
+
+```bash
+# Run public verification script
+npx hardhat run scripts/public-verification.js --network localhost
+```
+
+This script demonstrates:
+- Verifying valid certificates
+- Checking revoked certificates
+- Handling non-existent certificates
+- Viewing full certificate details when verified
+
+## Running Tests
+
+To run the automated test suite:
+
+```bash
+# Make sure you're in the project directory
+cd /usr/app/AcademicRecordVerification
+
+# Run the tests
+npx hardhat test
+```
+
+The test suite verifies:
+- Institution management (authorization/revocation)
+- Certificate issuance by authorized institutions
+- Certificate validation and verification
+- Certificate revocation rules
+- Access control for all operations
+
+These tests provide comprehensive validation of the contract's functionality and serve as examples of programmatic contract interaction.
 
 ## Troubleshooting
 
