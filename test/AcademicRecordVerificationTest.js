@@ -83,13 +83,20 @@ describe("AcademicRecordVerification", function () {
 
       // Get the certificate ID from the event
       const receipt = await tx.wait();
-      const events = await academicRecordVerification.queryFilter(
-        academicRecordVerification.filters.CertificateIssued(),
-        receipt.blockHash
-      );
       
-      expect(events.length).to.be.greaterThan(0);
-      certificateId = events[0].args[0];
+      // Extract the CertificateIssued event from logs
+      const event = receipt.logs.find(log => {
+        try {
+          const parsed = academicRecordVerification.interface.parseLog(log);
+          return parsed.name === "CertificateIssued";
+        } catch (e) {
+          return false;
+        }
+      });
+      
+      expect(event).to.not.be.undefined;
+      const parsedEvent = academicRecordVerification.interface.parseLog(event);
+      certificateId = parsedEvent.args[0];
 
       // Verify certificate details
       const certificate = await academicRecordVerification.getCertificate(certificateId);
@@ -138,13 +145,20 @@ describe("AcademicRecordVerification", function () {
       
       // Get certificate ID
       const receipt = await tx.wait();
-      const events = await academicRecordVerification.queryFilter(
-        academicRecordVerification.filters.CertificateIssued(),
-        receipt.blockHash
-      );
       
-      expect(events.length).to.be.greaterThan(0);
-      certificateId = events[0].args[0];
+      // Extract the CertificateIssued event from logs
+      const event = receipt.logs.find(log => {
+        try {
+          const parsed = academicRecordVerification.interface.parseLog(log);
+          return parsed.name === "CertificateIssued";
+        } catch (e) {
+          return false;
+        }
+      });
+      
+      expect(event).to.not.be.undefined;
+      const parsedEvent = academicRecordVerification.interface.parseLog(event);
+      certificateId = parsedEvent.args[0];
     });
 
     it("Should verify valid certificates", async function () {

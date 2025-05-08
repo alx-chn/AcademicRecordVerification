@@ -42,10 +42,14 @@ Take note of this address for the next step.
 
 ### Step 3: Update the Contract Address
 
+Use the update-contract-address.js script to update all script files with your deployed contract address:
+
 ```bash
-# Update the scripts with your contract address (use the direct Node script)
+# Update the scripts with your contract address
 node scripts/update-contract-address.js 0xYourContractAddress
 ```
+
+This will automatically update the contract address in all relevant script files.
 
 ### Step 4: Run the Demonstration
 
@@ -150,13 +154,6 @@ These tests provide comprehensive validation of the contract's functionality and
 
 ## Troubleshooting
 
-### BigInt Error
-
-If you see `Cannot mix BigInt and other types` error, run:
-```bash
-node scripts/fix-bigint.js
-```
-
 ### Docker Issues
 
 If experiencing Docker/npx errors, use these alternatives:
@@ -176,4 +173,4 @@ If experiencing Docker/npx errors, use these alternatives:
 
 ### For Anyone (Employers, Students, etc.)
 - Verify a certificate: `verifyCertificate(certificateId)`
-- Get certificate details: `getCertificate(certificateId)` 
+- Get certificate details: `getCertificate(certificateId)`

@@ -41,15 +41,24 @@ For detailed setup and usage instructions, please refer to [USAGE.md](./USAGE.md
 
 - `contracts/`: Smart contract code
 - `scripts/`: Deployment and interaction scripts
+  - `deploy.js`: Deploys the contract
+  - `update-contract-address.js`: Updates contract address in script files
+  - `demo.js`: Complete system demonstration
+  - `owner-actions.js`: Owner-specific actions (authorize/revoke institutions)
+  - `institution-actions.js`: Institution-specific actions (issue/revoke certificates)
+  - `public-verification.js`: Public certificate verification
 - `test/`: Comprehensive test suite
 
 ## Usage Examples
 
 The project includes three main ways to interact with the contract:
 
-1. **Automated Demonstration**: Run `node scripts/run-demo.js` for a complete demonstration
-2. **Interactive Console**: Use Hardhat console for manual interaction ([guide](./scripts/console-guide.md))
-3. **Test Suite**: Comprehensive tests showing all functionality
+1. **Demonstration**: Run `npx hardhat run scripts/demo.js --network localhost` for a complete demonstration
+2. **Role-Based Scripts**: Use environment variables with dedicated scripts for each role:
+   - Owner: `AUTH=true INSTITUTION="HKU" npx hardhat run scripts/owner-actions.js --network localhost`
+   - Institution: `ISSUE=true STUDENT="Jane Smith" npx hardhat run scripts/institution-actions.js --network localhost`
+   - Public: `VERIFY=true CERT_ID=0x123... npx hardhat run scripts/public-verification.js --network localhost`
+3. **Test Suite**: Comprehensive tests showing all functionality with `npx hardhat test`
 
 ## Troubleshooting
 
