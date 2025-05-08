@@ -1,6 +1,18 @@
 // This script demonstrates the institution actions in the Academic Record Verification system
 const hre = require("hardhat");
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+const ISSUE_FLAG = "-issue";
+const REVOKE_FLAG = "-revoke";
+const VIEW_FLAG = "-view";
+const CERT_FLAG = "-cert";
+const STUDENT_FLAG = "-student";
+const DEGREE_FLAG = "-degree";
+const MAJOR_FLAG = "-major";
+const GRADE_FLAG = "-grade";
+const INS_FLAG = "-ins";
+
 async function main() {
   console.log("Academic Record Verification - Institution Actions");
   console.log("===================================================");
@@ -11,190 +23,254 @@ async function main() {
   const contract = AcademicRecordVerification.attach(contractAddress);
 
   // Get signers
-  const [owner, institution1, institution2, student1] = await hre.ethers.getSigners();
+  const [owner, institution1, institution2, institution3] = await hre.ethers.getSigners();
   
   console.log("Account Information:");
   console.log(`- Owner/System Admin: ${owner.address}`);
-  console.log(`- Institution 1 (HKU): ${institution1.address}`);
-  console.log(`- Institution 2 (CityU): ${institution2.address}`);
+  console.log(`- Default Institution (HKU): ${institution1.address}`);
+  console.log(`- Default Institution (CityU): ${institution2.address}`);
   console.log("");
 
-  // For demo purposes, ensure institutions are authorized
-  console.log("Authorizing institutions (if not already authorized)...");
+  // Determine which action to perform based on command line arguments
+  const hasIssue = args.includes(ISSUE_FLAG);
+  const hasRevoke = args.includes(REVOKE_FLAG);
+  const hasView = args.includes(VIEW_FLAG) || (!hasIssue && !hasRevoke);
+  
+  // Get institution address
+  let insIndex = args.indexOf(INS_FLAG);
+  let institutionName = "Hong Kong University"; // Default
+  let institutionSigner = institution1; // Default
+  
+  if (insIndex !== -1 && insIndex + 1 < args.length) {
+    const insName = args.slice(insIndex + 1).join(" ");
+    
+    if (insName.toLowerCase().includes("hku") || insName.toLowerCase().includes("hong kong")) {
+      institutionName = "Hong Kong University";
+      institutionSigner = institution1;
+    } else if (insName.toLowerCase().includes("cityu") || insName.toLowerCase().includes("city")) {
+      institutionName = "City University of Hong Kong";
+      institutionSigner = institution2;
+    } else if (insName.toLowerCase().includes("polyu") || insName.toLowerCase().includes("poly")) {
+      institutionName = "Hong Kong Polytechnic University";
+      institutionSigner = institution3;
+    }
+  }
+  
+  console.log(`Using institution: ${institutionName} (${institutionSigner.address})`);
+  
+  // For demo purposes, ensure institution is authorized
   try {
-    await contract.authorizeInstitution(institution1.address, "Hong Kong University");
-    await contract.authorizeInstitution(institution2.address, "City University of Hong Kong");
-    console.log("✓ Institutions authorized");
+    await contract.authorizeInstitution(institutionSigner.address, institutionName);
+    console.log("✓ Institution authorized (or was already authorized)");
   } catch (error) {
     console.log(`Note: ${error.message.split('\n')[0]}`);
   }
   
-  // 1. Issue Certificates
-  console.log("\n1. Issuing Certificates");
-  console.log("-------------------------------------------");
-  
-  // Variables to store certificate IDs
-  let certificateId1, certificateId2;
-  
-  // Institution 1 issues a certificate
-  console.log("\nIssuing certificate from HKU...");
-  try {
-    const tx1 = await contract.connect(institution1).issueCertificate(
-      "John Doe",
-      "S123456",
-      "Bachelor of Science",
-      "Computer Science",
-      "2023-06-15",
-      "2023-06-30",
-      385 // GPA 3.85
-    );
-    const receipt1 = await tx1.wait();
-    
-    // Extract certificate ID from event
-    const event1 = receipt1.logs.find(log => {
-      try {
-        return contract.interface.parseLog(log).name === "CertificateIssued";
-      } catch (e) {
-        return false;
-      }
-    });
-    
-    if (event1) {
-      const parsedEvent = contract.interface.parseLog(event1);
-      certificateId1 = parsedEvent.args[0];
-      console.log(`✓ SUCCESS: Certificate issued with ID: ${certificateId1}`);
-      console.log(`  Student: John Doe (S123456)`);
-      console.log(`  Degree: Bachelor of Science in Computer Science`);
-      console.log(`  Grade: 3.85`);
-    } else {
-      console.log(`✓ SUCCESS: Certificate issued, but event details not available`);
-    }
-  } catch (error) {
-    console.log(`❌ ERROR: Failed to issue certificate: ${error.message.split('\n')[0]}`);
-  }
-
-  // Institution 2 issues a certificate
-  console.log("\nIssuing certificate from CityU...");
-  try {
-    const tx2 = await contract.connect(institution2).issueCertificate(
-      "Jane Smith",
-      "S789012",
-      "Master of Business Administration",
-      "Finance",
-      "2023-05-20",
-      "2023-06-01",
-      390 // GPA 3.90
-    );
-    const receipt2 = await tx2.wait();
-    
-    // Extract certificate ID from event
-    const event2 = receipt2.logs.find(log => {
-      try {
-        return contract.interface.parseLog(log).name === "CertificateIssued";
-      } catch (e) {
-        return false;
-      }
-    });
-    
-    if (event2) {
-      const parsedEvent = contract.interface.parseLog(event2);
-      certificateId2 = parsedEvent.args[0];
-      console.log(`✓ SUCCESS: Certificate issued with ID: ${certificateId2}`);
-      console.log(`  Student: Jane Smith (S789012)`);
-      console.log(`  Degree: Master of Business Administration in Finance`);
-      console.log(`  Grade: 3.90`);
-    } else {
-      console.log(`✓ SUCCESS: Certificate issued, but event details not available`);
-    }
-  } catch (error) {
-    console.log(`❌ ERROR: Failed to issue certificate: ${error.message.split('\n')[0]}`);
+  // Get certificate ID if specified
+  let certificateId;
+  const certIndex = args.indexOf(CERT_FLAG);
+  if (certIndex !== -1 && certIndex + 1 < args.length) {
+    certificateId = args[certIndex + 1];
   }
   
-  // 2. Get Certificate Details
-  console.log("\n2. Getting Certificate Details");
-  console.log("-------------------------------------------");
+  // Store certificates created in this session
+  let sessionCertificates = [];
   
-  if (certificateId1) {
-    console.log(`\nGetting details for certificate ID: ${certificateId1}...`);
+  // 1. Issue Certificate
+  if (hasIssue) {
+    console.log("\n1. Issuing Certificate");
+    console.log("-------------------------------------------");
+    
+    // Get student details from command line or use defaults
+    const studentName = getArgValue(STUDENT_FLAG, "John Doe");
+    const studentId = "S" + Math.floor(Math.random() * 900000 + 100000); // Random student ID
+    const degree = getArgValue(DEGREE_FLAG, "Bachelor of Science");
+    const major = getArgValue(MAJOR_FLAG, "Computer Science");
+    const gradeStr = getArgValue(GRADE_FLAG, "85");
+    const grade = Math.floor(parseFloat(gradeStr) * 100); // Convert to contract format (e.g., 3.85 -> 385)
+    
+    const today = new Date();
+    const issueDate = today.toISOString().split('T')[0];
+    const graduationDate = new Date(today.getFullYear() + 4, 5, 15).toISOString().split('T')[0];
+    
+    console.log("\nIssuing certificate with the following details:");
+    console.log(`- Student: ${studentName} (${studentId})`);
+    console.log(`- Degree: ${degree} in ${major}`);
+    console.log(`- Issue Date: ${issueDate}`);
+    console.log(`- Graduation Date: ${graduationDate}`);
+    console.log(`- Grade: ${gradeStr}`);
+    
     try {
-      const cert1 = await contract.connect(institution1).getCertificate(certificateId1);
-      console.log(`Certificate Details:`);
-      console.log(`- Student Name: ${cert1.studentName}`);
-      console.log(`- Student ID: ${cert1.studentId}`);
-      console.log(`- Degree: ${cert1.degree}`);
-      console.log(`- Major: ${cert1.major}`);
-      console.log(`- Issue Date: ${cert1.issueDate}`);
-      console.log(`- Graduation Date: ${cert1.graduationDate}`);
-      console.log(`- Grade: ${Number(cert1.grade) / 100}`);
-      console.log(`- Issuing Institution: ${cert1.issuingInstitution}`);
-      console.log(`- Institution Name: ${cert1.institutionName}`);
-      console.log(`- Is Revoked: ${cert1.isRevoked}`);
-      console.log(`- Revocation Reason: ${cert1.revocationReason || "N/A"}`);
-    } catch (error) {
-      console.log(`❌ ERROR: Failed to get certificate details: ${error.message.split('\n')[0]}`);
-    }
-  }
-  
-  // 3. Revoke Certificate
-  console.log("\n3. Revoking Certificate");
-  console.log("-------------------------------------------");
-  
-  if (certificateId1) {
-    console.log(`\nRevoking certificate ID: ${certificateId1}...`);
-    try {
-      const tx3 = await contract.connect(institution1).revokeCertificate(
-        certificateId1,
-        "Academic misconduct discovered"
+      const tx = await contract.connect(institutionSigner).issueCertificate(
+        studentName,
+        studentId,
+        degree,
+        major,
+        issueDate,
+        graduationDate,
+        grade
       );
-      const receipt3 = await tx3.wait();
+      const receipt = await tx.wait();
       
-      // Extract event information
-      const event3 = receipt3.logs.find(log => {
+      // Extract certificate ID from event
+      const event = receipt.logs.find(log => {
         try {
-          return contract.interface.parseLog(log).name === "CertificateRevoked";
+          return contract.interface.parseLog(log).name === "CertificateIssued";
         } catch (e) {
           return false;
         }
       });
       
-      if (event3) {
-        const parsedEvent = contract.interface.parseLog(event3);
-        console.log(`✓ SUCCESS: Certificate revoked - ID: ${parsedEvent.args[0]}`);
-        console.log(`  Reason: ${parsedEvent.args[2]}`);
+      if (event) {
+        const parsedEvent = contract.interface.parseLog(event);
+        certificateId = parsedEvent.args[0];
+        sessionCertificates.push(certificateId);
+        
+        console.log(`✓ SUCCESS: Certificate issued with ID: ${certificateId}`);
+        console.log(`\nIMPORTANT: Save this certificate ID for future reference or revocation.`);
       } else {
-        console.log(`✓ SUCCESS: Certificate revoked, but event details not available`);
+        console.log(`✓ SUCCESS: Certificate issued, but couldn't retrieve the ID`);
       }
+    } catch (error) {
+      console.log(`❌ ERROR: Failed to issue certificate: ${error.message.split('\n')[0]}`);
+    }
+  }
+  
+  // 2. View Certificate
+  if (hasView && certificateId) {
+    console.log("\n2. Viewing Certificate Details");
+    console.log("-------------------------------------------");
+    
+    console.log(`\nGetting details for certificate ID: ${certificateId}...`);
+    try {
+      const cert = await contract.connect(institutionSigner).getCertificate(certificateId);
+      console.log(`Certificate Details:`);
+      console.log(`- Student Name: ${cert[0]}`);
+      console.log(`- Student ID: ${cert[1]}`);
+      console.log(`- Degree: ${cert[2]}`);
+      console.log(`- Major: ${cert[3]}`);
+      console.log(`- Issue Date: ${cert[4]}`);
+      console.log(`- Graduation Date: ${cert[5]}`);
+      console.log(`- Grade: ${Number(cert[6]) / 100}`);
+      console.log(`- Issuing Institution: ${cert[9]}`);
+      console.log(`- Institution Name: ${cert[10]}`);
+      console.log(`- Is Revoked: ${cert[7]}`);
+      console.log(`- Revocation Reason: ${cert[8] || "N/A"}`);
+    } catch (error) {
+      console.log(`❌ ERROR: Failed to get certificate details: ${error.message.split('\n')[0]}`);
+      
+      // If we can't find the requested certificate but we created one in this session, show it
+      if (sessionCertificates.length > 0 && !certificateId) {
+        console.log(`\nShowing latest certificate created in this session instead: ${sessionCertificates[0]}`);
+        try {
+          const cert = await contract.connect(institutionSigner).getCertificate(sessionCertificates[0]);
+          console.log(`Certificate Details:`);
+          console.log(`- Student Name: ${cert[0]}`);
+          console.log(`- Student ID: ${cert[1]}`);
+          console.log(`- Degree: ${cert[2]}`);
+          console.log(`- Major: ${cert[3]}`);
+          console.log(`- Issue Date: ${cert[4]}`);
+          console.log(`- Graduation Date: ${cert[5]}`);
+          console.log(`- Grade: ${Number(cert[6]) / 100}`);
+          console.log(`- Issuing Institution: ${cert[9]}`);
+          console.log(`- Institution Name: ${cert[10]}`);
+          console.log(`- Is Revoked: ${cert[7]}`);
+          console.log(`- Revocation Reason: ${cert[8] || "N/A"}`);
+        } catch (error) {
+          console.log(`❌ ERROR: Failed to get certificate details: ${error.message.split('\n')[0]}`);
+        }
+      }
+    }
+  } else if (hasView && !certificateId && sessionCertificates.length > 0) {
+    // If view is requested with no certificate ID but we created one, show it
+    console.log("\n2. Viewing Certificate Details");
+    console.log("-------------------------------------------");
+    
+    console.log(`\nShowing latest certificate created in this session: ${sessionCertificates[0]}`);
+    try {
+      const cert = await contract.connect(institutionSigner).getCertificate(sessionCertificates[0]);
+      console.log(`Certificate Details:`);
+      console.log(`- Student Name: ${cert[0]}`);
+      console.log(`- Student ID: ${cert[1]}`);
+      console.log(`- Degree: ${cert[2]}`);
+      console.log(`- Major: ${cert[3]}`);
+      console.log(`- Issue Date: ${cert[4]}`);
+      console.log(`- Graduation Date: ${cert[5]}`);
+      console.log(`- Grade: ${Number(cert[6]) / 100}`);
+      console.log(`- Issuing Institution: ${cert[9]}`);
+      console.log(`- Institution Name: ${cert[10]}`);
+      console.log(`- Is Revoked: ${cert[7]}`);
+      console.log(`- Revocation Reason: ${cert[8] || "N/A"}`);
+    } catch (error) {
+      console.log(`❌ ERROR: Failed to get certificate details: ${error.message.split('\n')[0]}`);
+    }
+  } else if (hasView && !certificateId) {
+    console.log("\nNo certificate ID specified for viewing. Use -cert [certificateId] to view details.");
+  }
+  
+  // 3. Revoke Certificate
+  if (hasRevoke && certificateId) {
+    console.log("\n3. Revoking Certificate");
+    console.log("-------------------------------------------");
+    
+    console.log(`\nRevoking certificate ID: ${certificateId}...`);
+    try {
+      const tx = await contract.connect(institutionSigner).revokeCertificate(
+        certificateId,
+        "Academic misconduct discovered"
+      );
+      await tx.wait();
+      
+      console.log(`✓ SUCCESS: Certificate revoked - ID: ${certificateId}`);
+      console.log(`  Reason: Academic misconduct discovered`);
       
       // Verify certificate is now revoked
-      const cert1After = await contract.getCertificate(certificateId1);
+      const cert = await contract.getCertificate(certificateId);
       console.log(`\nCertificate status after revocation:`);
-      console.log(`- Is Revoked: ${cert1After.isRevoked}`);
-      console.log(`- Revocation Reason: ${cert1After.revocationReason}`);
+      console.log(`- Is Revoked: ${cert[7]}`);
+      console.log(`- Revocation Reason: ${cert[8]}`);
     } catch (error) {
       console.log(`❌ ERROR: Failed to revoke certificate: ${error.message.split('\n')[0]}`);
     }
+  } else if (hasRevoke && !certificateId) {
+    console.log("\nNo certificate ID specified for revocation. Use -cert [certificateId] to revoke a certificate.");
   }
   
-  // 4. Demonstrate access control for revoking certificates
-  console.log("\n4. Testing Access Control for Revoking Certificates");
+  // Show help if no valid action was performed
+  if ((!hasIssue && !hasRevoke && !hasView) || (hasView && !certificateId && sessionCertificates.length === 0)) {
+    showHelp();
+  }
+  
+  console.log("\nInstitution actions completed!");
+}
+
+// Helper function to get argument value
+function getArgValue(flag, defaultValue) {
+  const index = args.indexOf(flag);
+  if (index !== -1 && index + 1 < args.length) {
+    return args.slice(index + 1).join(" ");
+  }
+  return defaultValue;
+}
+
+function showHelp() {
+  console.log("\nUsage Options:");
   console.log("-------------------------------------------");
-  
-  if (certificateId2) {
-    console.log(`\nAttempting to revoke certificate ID: ${certificateId2} from a different institution...`);
-    try {
-      // Institution 1 tries to revoke Institution 2's certificate
-      await contract.connect(institution1).revokeCertificate(
-        certificateId2,
-        "Attempting unauthorized revocation"
-      );
-      console.log(`❌ UNEXPECTED RESULT: The certificate was revoked by a non-issuing institution`);
-    } catch (error) {
-      console.log(`✓ EXPECTED RESULT: Non-issuing institution cannot revoke this certificate`);
-      console.log(`  Error: ${error.message.split('\n')[0]}`);
-    }
-  }
-  
-  console.log("\nInstitution actions demonstration completed!");
+  console.log("npx hardhat run scripts/institution-actions.js --network localhost [options]");
+  console.log("\nOptions:");
+  console.log("  -issue                Issue a new certificate");
+  console.log("  -revoke               Revoke an existing certificate");
+  console.log("  -view                 View certificate details (default)");
+  console.log("  -cert [id]            Specify certificate ID (required for revoke/view)");
+  console.log("  -ins [name]           Specify institution name (e.g., HKU, CityU)");
+  console.log("  -student [name]       Student name for certificate issuance");
+  console.log("  -degree [name]        Degree name for certificate issuance");
+  console.log("  -major [name]         Major for certificate issuance");
+  console.log("  -grade [value]        Grade/GPA for certificate issuance (e.g., 3.85)");
+  console.log("\nExamples:");
+  console.log("  npx hardhat run scripts/institution-actions.js --network localhost -issue -student \"Jane Smith\" -degree \"Master of Science\" -major \"Data Science\" -grade 3.95 -ins HKU");
+  console.log("  npx hardhat run scripts/institution-actions.js --network localhost -view -cert 0x123abc...");
+  console.log("  npx hardhat run scripts/institution-actions.js --network localhost -revoke -cert 0x123abc...");
 }
 
 // Error handling wrapper

@@ -1,6 +1,13 @@
 // This script demonstrates the owner actions in the Academic Record Verification system
 const hre = require("hardhat");
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+const AUTH_FLAG = "-auth";
+const REVOKE_FLAG = "-revoke";
+const VIEW_FLAG = "-view";
+const INS_FLAG = "-ins";
+
 async function main() {
   console.log("Academic Record Verification - Owner Actions");
   console.log("==============================================");
@@ -11,125 +18,172 @@ async function main() {
   const contract = AcademicRecordVerification.attach(contractAddress);
 
   // Get signers
-  const [owner, institution1, institution2] = await hre.ethers.getSigners();
+  const [owner, institution1, institution2, institution3, institution4] = await hre.ethers.getSigners();
   
   console.log("Account Information:");
   console.log(`- Owner/System Admin: ${owner.address}`);
-  console.log(`- Institution 1: ${institution1.address}`);
-  console.log(`- Institution 2: ${institution2.address}`);
+  console.log(`- Default Institution 1: ${institution1.address}`);
+  console.log(`- Default Institution 2: ${institution2.address}`);
   console.log("");
 
-  // Demonstrate Owner Actions
-  console.log("1. Owner Actions");
-  console.log("-------------------------------------------");
+  // Determine which action to perform based on command line arguments
+  const hasAuth = args.includes(AUTH_FLAG);
+  const hasRevoke = args.includes(REVOKE_FLAG);
+  const hasView = args.includes(VIEW_FLAG) || (!hasAuth && !hasRevoke); // Default to view if no action specified
   
-  // Authorize first institution
-  console.log("Authorizing Institution 1 (HKU)...");
-  try {
-    const tx1 = await contract.authorizeInstitution(
-      institution1.address,
-      "Hong Kong University"
-    );
-    const receipt1 = await tx1.wait();
+  // Get institution name if provided
+  let insIndex = args.indexOf(INS_FLAG);
+  let institutionName = "";
+  let institutionAddress;
+  
+  if (insIndex !== -1 && insIndex + 1 < args.length) {
+    institutionName = args.slice(insIndex + 1).join(" ");
     
-    // Extract event information
-    const event1 = receipt1.logs.find(log => {
-      try {
-        return contract.interface.parseLog(log).name === "InstitutionAuthorized";
-      } catch (e) {
-        return false;
-      }
-    });
-    
-    if (event1) {
-      const parsedEvent = contract.interface.parseLog(event1);
-      console.log(`✓ SUCCESS: Institution authorized - Address: ${parsedEvent.args[0]}, Name: ${parsedEvent.args[1]}`);
+    // Use different addresses based on index for demo purposes
+    if (institutionName.toLowerCase().includes("hku") || institutionName.toLowerCase().includes("hong kong")) {
+      institutionAddress = institution1.address;
+      institutionName = "Hong Kong University";
+    } else if (institutionName.toLowerCase().includes("cityu") || institutionName.toLowerCase().includes("city")) {
+      institutionAddress = institution2.address;
+      institutionName = "City University of Hong Kong";
+    } else if (institutionName.toLowerCase().includes("polyu") || institutionName.toLowerCase().includes("poly")) {
+      institutionAddress = institution3.address;
+      institutionName = "Hong Kong Polytechnic University";
     } else {
-      console.log(`✓ SUCCESS: Institution authorized, but event details not available`);
+      institutionAddress = institution4.address;
+      if (!institutionName) institutionName = "Unknown Institution";
     }
-  } catch (error) {
-    console.log(`❌ ERROR: Failed to authorize institution: ${error.message.split('\n')[0]}`);
   }
-  
-  // Authorize second institution
-  console.log("\nAuthorizing Institution 2 (CityU)...");
-  try {
-    const tx2 = await contract.authorizeInstitution(
-      institution2.address,
-      "City University of Hong Kong"
-    );
-    const receipt2 = await tx2.wait();
+
+  // Authorize institution
+  if (hasAuth && institutionName) {
+    console.log(`\nAuthorizing Institution: ${institutionName} (${institutionAddress})`);
+    console.log("-------------------------------------------");
     
-    // Extract event information
-    const event2 = receipt2.logs.find(log => {
-      try {
-        return contract.interface.parseLog(log).name === "InstitutionAuthorized";
-      } catch (e) {
-        return false;
-      }
-    });
-    
-    if (event2) {
-      const parsedEvent = contract.interface.parseLog(event2);
-      console.log(`✓ SUCCESS: Institution authorized - Address: ${parsedEvent.args[0]}, Name: ${parsedEvent.args[1]}`);
-    } else {
-      console.log(`✓ SUCCESS: Institution authorized, but event details not available`);
+    try {
+      const tx = await contract.authorizeInstitution(
+        institutionAddress,
+        institutionName
+      );
+      await tx.wait();
+      
+      console.log(`✓ SUCCESS: Institution authorized - ${institutionAddress} as ${institutionName}`);
+    } catch (error) {
+      console.log(`❌ ERROR: Failed to authorize institution: ${error.message.split('\n')[0]}`);
     }
-  } catch (error) {
-    console.log(`❌ ERROR: Failed to authorize institution: ${error.message.split('\n')[0]}`);
-  }
-  
-  // Get institution details
-  console.log("\nGetting institution details...");
-  try {
-    const institution1Details = await contract.authorizedInstitutions(institution1.address);
-    console.log(`Institution 1 (${institution1.address}):`);
-    console.log(`- Name: ${institution1Details.name}`);
-    console.log(`- Authorized: ${institution1Details.isAuthorized}`);
-    
-    const institution2Details = await contract.authorizedInstitutions(institution2.address);
-    console.log(`\nInstitution 2 (${institution2.address}):`);
-    console.log(`- Name: ${institution2Details.name}`);
-    console.log(`- Authorized: ${institution2Details.isAuthorized}`);
-  } catch (error) {
-    console.log(`❌ ERROR: Failed to get institution details: ${error.message.split('\n')[0]}`);
   }
   
   // Revoke institution
-  console.log("\n2. Revoking Institution");
-  console.log("-------------------------------------------");
-  
-  console.log("Revoking Institution 2 (CityU)...");
-  try {
-    const tx3 = await contract.revokeInstitution(institution2.address);
-    const receipt3 = await tx3.wait();
+  if (hasRevoke && institutionName) {
+    console.log(`\nRevoking Institution: ${institutionName} (${institutionAddress})`);
+    console.log("-------------------------------------------");
     
-    // Extract event information
-    const event3 = receipt3.logs.find(log => {
+    try {
+      const tx = await contract.revokeInstitution(institutionAddress);
+      await tx.wait();
+      
+      console.log(`✓ SUCCESS: Institution revoked - ${institutionAddress} (${institutionName})`);
+      
+      // Verify institution is now revoked by attempting to issue a certificate
       try {
-        return contract.interface.parseLog(log).name === "InstitutionRevoked";
-      } catch (e) {
-        return false;
+        const issueTx = await contract.connect(hre.ethers.provider.getSigner(institutionAddress)).issueCertificate(
+          "Test Student",
+          "TEST789",
+          "Test Degree",
+          "Test Major",
+          "2023-01-01",
+          "2023-01-01",
+          400
+        );
+        await issueTx.wait();
+        console.log(`❌ UNEXPECTED: Institution can still issue certificates after revocation`);
+      } catch (error) {
+        if (error.message.includes("Only authorized institutions can issue certificates")) {
+          console.log(`✓ SUCCESS: Institution is properly revoked (cannot issue certificates)`);
+        } else {
+          console.log(`❓ INCONCLUSIVE: Institution failed for reasons other than authorization: ${error.message.split('\n')[0]}`);
+        }
       }
-    });
-    
-    if (event3) {
-      const parsedEvent = contract.interface.parseLog(event3);
-      console.log(`✓ SUCCESS: Institution revoked - Address: ${parsedEvent.args[0]}`);
-    } else {
-      console.log(`✓ SUCCESS: Institution revoked, but event details not available`);
+    } catch (error) {
+      console.log(`❌ ERROR: Failed to revoke institution: ${error.message.split('\n')[0]}`);
     }
-    
-    // Verify institution is now revoked
-    const institution2DetailsAfter = await contract.authorizedInstitutions(institution2.address);
-    console.log(`\nInstitution 2 status after revocation:`);
-    console.log(`- Name: ${institution2DetailsAfter.name}`);
-    console.log(`- Authorized: ${institution2DetailsAfter.isAuthorized}`);
-  } catch (error) {
-    console.log(`❌ ERROR: Failed to revoke institution: ${error.message.split('\n')[0]}`);
   }
   
-  console.log("\nOwner actions demonstration completed!");
+  // View/verify institutions
+  if (hasView) {
+    console.log("\nVerifying Institution Authorization Status");
+    console.log("-------------------------------------------");
+    
+    // Default institutions to check
+    const institutionsToCheck = [];
+    
+    if (institutionAddress) {
+      // If institution specified via command line, just check that one
+      institutionsToCheck.push({
+        signer: hre.ethers.provider.getSigner(institutionAddress),
+        address: institutionAddress,
+        name: institutionName
+      });
+    } else {
+      // Otherwise check the default institutions
+      institutionsToCheck.push({
+        signer: institution1,
+        address: institution1.address,
+        name: "Hong Kong University"
+      });
+      institutionsToCheck.push({
+        signer: institution2,
+        address: institution2.address,
+        name: "City University of Hong Kong"
+      });
+    }
+    
+    for (const inst of institutionsToCheck) {
+      console.log(`\nChecking authorization for: ${inst.name} (${inst.address})`);
+      try {
+        // Issue a temporary certificate to test if institution is authorized
+        const issueTx = await contract.connect(inst.signer).issueCertificate(
+          "Test Student",
+          "TEST" + Math.floor(Math.random() * 10000),
+          "Test Degree",
+          "Test Major",
+          "2023-01-01",
+          "2023-01-01",
+          400
+        );
+        await issueTx.wait();
+        console.log(`✓ AUTHORIZED: ${inst.name} is authorized (can issue certificates)`);
+      } catch (error) {
+        if (error.message.includes("Only authorized institutions can issue certificates")) {
+          console.log(`❌ NOT AUTHORIZED: ${inst.name} is not authorized`);
+        } else {
+          console.log(`❓ ERROR: ${error.message.split('\n')[0]}`);
+        }
+      }
+    }
+  }
+  
+  // Show help if no valid action was performed
+  if (!hasAuth && !hasRevoke && !hasView) {
+    showHelp();
+  }
+  
+  console.log("\nOwner actions completed!");
+}
+
+function showHelp() {
+  console.log("\nUsage Options:");
+  console.log("-------------------------------------------");
+  console.log("npx hardhat run scripts/owner-actions.js --network localhost [options]");
+  console.log("\nOptions:");
+  console.log("  -auth                 Authorize an institution");
+  console.log("  -revoke               Revoke an institution's authorization");
+  console.log("  -view                 View institution authorization status (default)");
+  console.log("  -ins [name]           Specify institution name (required for auth/revoke)");
+  console.log("\nExamples:");
+  console.log("  npx hardhat run scripts/owner-actions.js --network localhost -auth -ins \"Hong Kong University\"");
+  console.log("  npx hardhat run scripts/owner-actions.js --network localhost -revoke -ins CityU");
+  console.log("  npx hardhat run scripts/owner-actions.js --network localhost -view");
 }
 
 // Error handling wrapper

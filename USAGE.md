@@ -30,7 +30,7 @@ cd /usr/app/AcademicRecordVerification
 npx hardhat node
 
 # Deploy the contract (in your original terminal)
-node scripts/run-deploy.js
+npx hardhat run scripts/deploy.js --network localhost
 ```
 
 The deployment will output your contract address:
@@ -43,8 +43,8 @@ Take note of this address for the next step.
 ### Step 3: Update the Contract Address
 
 ```bash
-# Update the demo script with your contract address
-node scripts/update-address.js 0xYourContractAddress
+# Update the scripts with your contract address
+npx hardhat run scripts/update-address.js 0xYourContractAddress
 ```
 
 ### Step 4: Run the Demonstration
@@ -69,44 +69,63 @@ Instead of an interactive console, you can use our role-based scripts to perform
 As the system owner, you can authorize and revoke educational institutions:
 
 ```bash
-# Run owner actions script
-npx hardhat run scripts/owner-actions.js --network localhost
-```
+# Run owner actions with command-line options
+npx hardhat run scripts/owner-actions.js --network localhost [options]
 
-This script demonstrates:
-- Authorizing new educational institutions
-- Viewing institution details
-- Revoking institution access
+# Options:
+#  -auth                 Authorize an institution
+#  -revoke               Revoke an institution's authorization
+#  -view                 View institution authorization status (default)
+#  -ins [name]           Specify institution name (required for auth/revoke)
+
+# Examples:
+npx hardhat run scripts/owner-actions.js --network localhost -auth -ins "Hong Kong University"
+npx hardhat run scripts/owner-actions.js --network localhost -revoke -ins CityU
+npx hardhat run scripts/owner-actions.js --network localhost -view
+```
 
 ### Institution Actions
 
 As an authorized educational institution, you can issue and manage certificates:
 
 ```bash
-# Run institution actions script
-npx hardhat run scripts/institution-actions.js --network localhost
-```
+# Run institution actions with command-line options
+npx hardhat run scripts/institution-actions.js --network localhost [options]
 
-This script demonstrates:
-- Issuing new academic certificates
-- Viewing certificate details
-- Revoking certificates for valid reasons
-- Access control limitations for non-issuing institutions
+# Options:
+#  -issue                Issue a new certificate
+#  -revoke               Revoke an existing certificate
+#  -view                 View certificate details (default)
+#  -cert [id]            Specify certificate ID (required for revoke/view)
+#  -ins [name]           Specify institution name (e.g., HKU, CityU)
+#  -student [name]       Student name for certificate issuance
+#  -degree [name]        Degree name for certificate issuance
+#  -major [name]         Major for certificate issuance
+#  -grade [value]        Grade/GPA for certificate issuance (e.g., 3.85)
+
+# Examples:
+npx hardhat run scripts/institution-actions.js --network localhost -issue -student "Jane Smith" -degree "Master of Science" -major "Data Science" -grade 3.95 -ins HKU
+npx hardhat run scripts/institution-actions.js --network localhost -view -cert 0x123abc...
+npx hardhat run scripts/institution-actions.js --network localhost -revoke -cert 0x123abc...
+```
 
 ### Public Verification
 
 Anyone can verify certificates using the public verification script:
 
 ```bash
-# Run public verification script
-npx hardhat run scripts/public-verification.js --network localhost
-```
+# Run public verification with command-line options
+npx hardhat run scripts/public-verification.js --network localhost [options]
 
-This script demonstrates:
-- Verifying valid certificates
-- Checking revoked certificates
-- Handling non-existent certificates
-- Viewing full certificate details when verified
+# Options:
+#  -verify               Verify a certificate (default)
+#  -cert [id]            Specify certificate ID to verify
+#  -setup                Set up demo certificates (for testing only)
+
+# Examples:
+npx hardhat run scripts/public-verification.js --network localhost -verify -cert 0x123abc...
+npx hardhat run scripts/public-verification.js --network localhost -setup
+```
 
 ## Running Tests
 
@@ -141,9 +160,9 @@ node scripts/fix-bigint.js
 ### Docker Issues
 
 If experiencing Docker/npx errors, use these alternatives:
-- For deployment: `node scripts/run-deploy.js`
-- For demonstration: `node scripts/run-demo.js`
-- For console: `node -e "require('hardhat').run('console', { network: 'localhost' })"`
+- For deployment: `npx hardhat run scripts/deploy.js --network localhost`
+- For demonstration: `npx hardhat run scripts/demo.js --network localhost`
+- For console: `npx hardhat console --network localhost`
 
 ## Key Contract Functions
 
