@@ -43,8 +43,8 @@ Take note of this address for the next step.
 ### Step 3: Update the Contract Address
 
 ```bash
-# Update the scripts with your contract address
-npx hardhat run scripts/update-address.js 0xYourContractAddress
+# Update the scripts with your contract address (use the direct Node script)
+node scripts/update-contract-address.js 0xYourContractAddress
 ```
 
 ### Step 4: Run the Demonstration
@@ -62,26 +62,26 @@ This demonstration shows:
 
 ## Role-Based Script Usage
 
-Instead of an interactive console, you can use our role-based scripts to perform specific actions:
+The system uses environment variables to control script behavior. This method provides a more reliable way to pass parameters than command-line arguments.
 
 ### Owner Actions
 
 As the system owner, you can authorize and revoke educational institutions:
 
 ```bash
-# Run owner actions with command-line options
-npx hardhat run scripts/owner-actions.js --network localhost [options]
+# Run owner actions with environment variables
+# Format: ENV_VAR=value npx hardhat run scripts/owner-actions.js --network localhost
 
-# Options:
-#  -auth                 Authorize an institution
-#  -revoke               Revoke an institution's authorization
-#  -view                 View institution authorization status (default)
-#  -ins [name]           Specify institution name (required for auth/revoke)
+# Environment Variables:
+#  AUTH=true             Authorize an institution
+#  REVOKE=true           Revoke an institution's authorization
+#  VIEW=true             View institution authorization status (default)
+#  INSTITUTION=[name]    Specify institution name (required for auth/revoke)
 
 # Examples:
-npx hardhat run scripts/owner-actions.js --network localhost -auth -ins "Hong Kong University"
-npx hardhat run scripts/owner-actions.js --network localhost -revoke -ins CityU
-npx hardhat run scripts/owner-actions.js --network localhost -view
+AUTH=true INSTITUTION="Hong Kong University" npx hardhat run scripts/owner-actions.js --network localhost
+REVOKE=true INSTITUTION=CityU npx hardhat run scripts/owner-actions.js --network localhost
+VIEW=true npx hardhat run scripts/owner-actions.js --network localhost
 ```
 
 ### Institution Actions
@@ -89,24 +89,24 @@ npx hardhat run scripts/owner-actions.js --network localhost -view
 As an authorized educational institution, you can issue and manage certificates:
 
 ```bash
-# Run institution actions with command-line options
-npx hardhat run scripts/institution-actions.js --network localhost [options]
+# Run institution actions with environment variables
+# Format: ENV_VAR=value npx hardhat run scripts/institution-actions.js --network localhost
 
-# Options:
-#  -issue                Issue a new certificate
-#  -revoke               Revoke an existing certificate
-#  -view                 View certificate details (default)
-#  -cert [id]            Specify certificate ID (required for revoke/view)
-#  -ins [name]           Specify institution name (e.g., HKU, CityU)
-#  -student [name]       Student name for certificate issuance
-#  -degree [name]        Degree name for certificate issuance
-#  -major [name]         Major for certificate issuance
-#  -grade [value]        Grade/GPA for certificate issuance (e.g., 3.85)
+# Environment Variables:
+#  ISSUE=true            Issue a new certificate
+#  REVOKE=true           Revoke an existing certificate
+#  VIEW=true             View certificate details (default)
+#  CERT_ID=[id]          Specify certificate ID (required for revoke/view)
+#  INSTITUTION=[name]    Specify institution name (e.g., HKU, CityU)
+#  STUDENT=[name]        Student name for certificate issuance
+#  DEGREE=[name]         Degree name for certificate issuance
+#  MAJOR=[name]          Major for certificate issuance
+#  GRADE=[value]         Grade/GPA for certificate issuance (e.g., 3.85)
 
 # Examples:
-npx hardhat run scripts/institution-actions.js --network localhost -issue -student "Jane Smith" -degree "Master of Science" -major "Data Science" -grade 3.95 -ins HKU
-npx hardhat run scripts/institution-actions.js --network localhost -view -cert 0x123abc...
-npx hardhat run scripts/institution-actions.js --network localhost -revoke -cert 0x123abc...
+ISSUE=true STUDENT="Jane Smith" DEGREE="Master of Science" MAJOR="Data Science" GRADE=3.95 INSTITUTION=HKU npx hardhat run scripts/institution-actions.js --network localhost
+VIEW=true CERT_ID=0x123abc... npx hardhat run scripts/institution-actions.js --network localhost
+REVOKE=true CERT_ID=0x123abc... INSTITUTION=HKU npx hardhat run scripts/institution-actions.js --network localhost
 ```
 
 ### Public Verification
@@ -114,17 +114,17 @@ npx hardhat run scripts/institution-actions.js --network localhost -revoke -cert
 Anyone can verify certificates using the public verification script:
 
 ```bash
-# Run public verification with command-line options
-npx hardhat run scripts/public-verification.js --network localhost [options]
+# Run public verification with environment variables
+# Format: ENV_VAR=value npx hardhat run scripts/public-verification.js --network localhost
 
-# Options:
-#  -verify               Verify a certificate (default)
-#  -cert [id]            Specify certificate ID to verify
-#  -setup                Set up demo certificates (for testing only)
+# Environment Variables:
+#  VERIFY=true           Verify a certificate (default)
+#  CERT_ID=[id]          Specify certificate ID to verify
+#  SETUP=true            Set up demo certificates (for testing only)
 
 # Examples:
-npx hardhat run scripts/public-verification.js --network localhost -verify -cert 0x123abc...
-npx hardhat run scripts/public-verification.js --network localhost -setup
+VERIFY=true CERT_ID=0x123abc... npx hardhat run scripts/public-verification.js --network localhost
+SETUP=true npx hardhat run scripts/public-verification.js --network localhost
 ```
 
 ## Running Tests

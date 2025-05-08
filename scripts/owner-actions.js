@@ -1,12 +1,11 @@
 // This script demonstrates the owner actions in the Academic Record Verification system
 const hre = require("hardhat");
 
-// Parse command line arguments
-const args = process.argv.slice(2);
-const AUTH_FLAG = "-auth";
-const REVOKE_FLAG = "-revoke";
-const VIEW_FLAG = "-view";
-const INS_FLAG = "-ins";
+// Parse environment variables instead of command-line arguments
+const AUTH = process.env.AUTH === 'true';
+const REVOKE = process.env.REVOKE === 'true';
+const VIEW = process.env.VIEW === 'true' || (!AUTH && !REVOKE); // Default to view
+const INSTITUTION = process.env.INSTITUTION || ''; // Institution name
 
 async function main() {
   console.log("Academic Record Verification - Owner Actions");
@@ -26,20 +25,12 @@ async function main() {
   console.log(`- Default Institution 2: ${institution2.address}`);
   console.log("");
 
-  // Determine which action to perform based on command line arguments
-  const hasAuth = args.includes(AUTH_FLAG);
-  const hasRevoke = args.includes(REVOKE_FLAG);
-  const hasView = args.includes(VIEW_FLAG) || (!hasAuth && !hasRevoke); // Default to view if no action specified
-  
-  // Get institution name if provided
-  let insIndex = args.indexOf(INS_FLAG);
-  let institutionName = "";
+  // Get institution address based on name
+  let institutionName = INSTITUTION;
   let institutionAddress;
   
-  if (insIndex !== -1 && insIndex + 1 < args.length) {
-    institutionName = args.slice(insIndex + 1).join(" ");
-    
-    // Use different addresses based on index for demo purposes
+  if (institutionName) {
+    // Use different addresses based on name for demo purposes
     if (institutionName.toLowerCase().includes("hku") || institutionName.toLowerCase().includes("hong kong")) {
       institutionAddress = institution1.address;
       institutionName = "Hong Kong University";
@@ -56,7 +47,7 @@ async function main() {
   }
 
   // Authorize institution
-  if (hasAuth && institutionName) {
+  if (AUTH && institutionName) {
     console.log(`\nAuthorizing Institution: ${institutionName} (${institutionAddress})`);
     console.log("-------------------------------------------");
     
@@ -74,7 +65,7 @@ async function main() {
   }
   
   // Revoke institution
-  if (hasRevoke && institutionName) {
+  if (REVOKE && institutionName) {
     console.log(`\nRevoking Institution: ${institutionName} (${institutionAddress})`);
     console.log("-------------------------------------------");
     
@@ -110,7 +101,7 @@ async function main() {
   }
   
   // View/verify institutions
-  if (hasView) {
+  if (VIEW) {
     console.log("\nVerifying Institution Authorization Status");
     console.log("-------------------------------------------");
     
@@ -163,27 +154,12 @@ async function main() {
     }
   }
   
-  // Show help if no valid action was performed
-  if (!hasAuth && !hasRevoke && !hasView) {
-    showHelp();
-  }
-  
+  // Show usage information
   console.log("\nOwner actions completed!");
-}
-
-function showHelp() {
-  console.log("\nUsage Options:");
-  console.log("-------------------------------------------");
-  console.log("npx hardhat run scripts/owner-actions.js --network localhost [options]");
-  console.log("\nOptions:");
-  console.log("  -auth                 Authorize an institution");
-  console.log("  -revoke               Revoke an institution's authorization");
-  console.log("  -view                 View institution authorization status (default)");
-  console.log("  -ins [name]           Specify institution name (required for auth/revoke)");
-  console.log("\nExamples:");
-  console.log("  npx hardhat run scripts/owner-actions.js --network localhost -auth -ins \"Hong Kong University\"");
-  console.log("  npx hardhat run scripts/owner-actions.js --network localhost -revoke -ins CityU");
-  console.log("  npx hardhat run scripts/owner-actions.js --network localhost -view");
+  console.log("\nUsage with environment variables:");
+  console.log("AUTH=true INSTITUTION=\"Hong Kong University\" npx hardhat run scripts/owner-actions.js --network localhost");
+  console.log("REVOKE=true INSTITUTION=CityU npx hardhat run scripts/owner-actions.js --network localhost");
+  console.log("VIEW=true npx hardhat run scripts/owner-actions.js --network localhost");
 }
 
 // Error handling wrapper

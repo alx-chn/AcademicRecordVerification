@@ -1,11 +1,10 @@
 // This script demonstrates public verification of academic certificates
 const hre = require("hardhat");
 
-// Parse command line arguments
-const args = process.argv.slice(2);
-const VERIFY_FLAG = "-verify";
-const CERT_FLAG = "-cert";
-const SETUP_FLAG = "-setup"; // Just for testing/demo
+// Parse environment variables instead of command-line arguments
+const VERIFY = process.env.VERIFY === 'true' || (!process.env.SETUP); // Default to verify
+const SETUP = process.env.SETUP === 'true';
+const CERT_ID = process.env.CERT_ID || ''; // Certificate ID
 
 async function main() {
   console.log("Academic Record Verification - Public Certificate Verification");
@@ -24,15 +23,11 @@ async function main() {
   console.log("");
 
   // Determine which action to perform
-  const hasVerify = args.includes(VERIFY_FLAG) || !args.includes(SETUP_FLAG); // Verify is default unless setup is specified
-  const hasSetup = args.includes(SETUP_FLAG);
+  const hasVerify = VERIFY;
+  const hasSetup = SETUP;
   
   // Get certificate ID if specified
-  let certificateId;
-  const certIndex = args.indexOf(CERT_FLAG);
-  if (certIndex !== -1 && certIndex + 1 < args.length) {
-    certificateId = args[certIndex + 1];
-  }
+  let certificateId = CERT_ID;
   
   // For demo purposes, set up test certificates if requested
   let demoIds = [];
@@ -102,11 +97,11 @@ async function main() {
       console.log(`✓ Demo environment set up successfully`);
       if (demoIds.length > 0) {
         console.log(`  Certificate 1 ID: ${demoIds[0]} (revoked)`);
-        console.log(`  To verify: npx hardhat run scripts/public-verification.js --network localhost -verify -cert ${demoIds[0]}`);
+        console.log(`  To verify: VERIFY=true CERT_ID=${demoIds[0]} npx hardhat run scripts/public-verification.js --network localhost`);
       }
       if (demoIds.length > 1) {
         console.log(`  Certificate 2 ID: ${demoIds[1]} (valid)`);
-        console.log(`  To verify: npx hardhat run scripts/public-verification.js --network localhost -verify -cert ${demoIds[1]}`);
+        console.log(`  To verify: VERIFY=true CERT_ID=${demoIds[1]} npx hardhat run scripts/public-verification.js --network localhost`);
       }
     } catch (error) {
       console.log(`❌ Error setting up demo environment: ${error.message.split('\n')[0]}`);
@@ -123,7 +118,7 @@ async function main() {
       await verifyAndDisplayCertificate(contract, public1, idToVerify);
     } else {
       console.log("\nNo certificate ID specified for verification.");
-      console.log("Use: npx hardhat run scripts/public-verification.js --network localhost -verify -cert 0x123abc...");
+      console.log("Use: VERIFY=true CERT_ID=0x123abc... npx hardhat run scripts/public-verification.js --network localhost");
       
       // For demo purposes, generate a fake ID to show invalid certificate handling
       if (!hasSetup) {
@@ -205,16 +200,11 @@ async function verifyAndDisplayCertificate(contract, verifier, certificateId) {
 }
 
 function showHelp() {
-  console.log("\nUsage Options:");
+  console.log("\nUsage with environment variables:");
   console.log("-------------------------------------------");
-  console.log("npx hardhat run scripts/public-verification.js --network localhost [options]");
-  console.log("\nOptions:");
-  console.log("  -verify               Verify a certificate (default)");
-  console.log("  -cert [id]            Specify certificate ID to verify");
-  console.log("  -setup                Set up demo certificates (for testing only)");
-  console.log("\nExamples:");
-  console.log("  npx hardhat run scripts/public-verification.js --network localhost -verify -cert 0x123abc...");
-  console.log("  npx hardhat run scripts/public-verification.js --network localhost -setup");
+  console.log("Examples:");
+  console.log("VERIFY=true CERT_ID=0x123abc... npx hardhat run scripts/public-verification.js --network localhost");
+  console.log("SETUP=true npx hardhat run scripts/public-verification.js --network localhost");
 }
 
 // Error handling wrapper

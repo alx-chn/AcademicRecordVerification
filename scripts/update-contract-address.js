@@ -1,12 +1,13 @@
-// Script to update the contract address in all script files
+// Script to update the contract address in script files
 const fs = require('fs');
 const path = require('path');
 
-// Get contract address from command line
+// Get address from command line
 const newAddress = process.argv[2];
+
 if (!newAddress || !newAddress.startsWith('0x')) {
   console.error('Error: Please provide a valid contract address starting with 0x');
-  console.error('Usage: node scripts/update-address.js 0xYourContractAddress');
+  console.error('Usage: node scripts/update-contract-address.js 0xYourContractAddress');
   process.exit(1);
 }
 
@@ -50,10 +51,10 @@ scriptFiles.forEach(scriptFile => {
 if (successCount > 0) {
   console.log(`\nContract address updated to: ${newAddress} in ${successCount} files.`);
   console.log('\nYou can now run any of these scripts:');
-  console.log('- npx hardhat run scripts/demo.js --network localhost           (Complete demonstration)');
-  console.log('- npx hardhat run scripts/owner-actions.js --network localhost      (Owner actions)');
-  console.log('- npx hardhat run scripts/institution-actions.js --network localhost (Institution actions)');
-  console.log('- npx hardhat run scripts/public-verification.js --network localhost (Public verification)');
+  console.log('- npx hardhat run scripts/demo.js --network localhost');
+  console.log('- npx hardhat run scripts/owner-actions.js --network localhost');
+  console.log('- npx hardhat run scripts/institution-actions.js --network localhost');
+  console.log('- npx hardhat run scripts/public-verification.js --network localhost');
 } else {
   console.error('Failed to update any files.');
   process.exit(1);

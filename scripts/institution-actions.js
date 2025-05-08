@@ -1,17 +1,16 @@
 // This script demonstrates the institution actions in the Academic Record Verification system
 const hre = require("hardhat");
 
-// Parse command line arguments
-const args = process.argv.slice(2);
-const ISSUE_FLAG = "-issue";
-const REVOKE_FLAG = "-revoke";
-const VIEW_FLAG = "-view";
-const CERT_FLAG = "-cert";
-const STUDENT_FLAG = "-student";
-const DEGREE_FLAG = "-degree";
-const MAJOR_FLAG = "-major";
-const GRADE_FLAG = "-grade";
-const INS_FLAG = "-ins";
+// Parse environment variables instead of command-line arguments
+const ISSUE = process.env.ISSUE === 'true';
+const REVOKE = process.env.REVOKE === 'true';
+const VIEW = process.env.VIEW === 'true' || (!ISSUE && !REVOKE); // Default to view if no action specified
+const CERT_ID = process.env.CERT_ID || ''; // Certificate ID
+const INSTITUTION = process.env.INSTITUTION || ''; // Institution name
+const STUDENT = process.env.STUDENT || 'John Doe'; // Student name
+const DEGREE = process.env.DEGREE || 'Bachelor of Science'; // Degree name
+const MAJOR = process.env.MAJOR || 'Computer Science'; // Major
+const GRADE = process.env.GRADE || '85'; // Grade (e.g., 3.85)
 
 async function main() {
   console.log("Academic Record Verification - Institution Actions");
@@ -31,18 +30,12 @@ async function main() {
   console.log(`- Default Institution (CityU): ${institution2.address}`);
   console.log("");
 
-  // Determine which action to perform based on command line arguments
-  const hasIssue = args.includes(ISSUE_FLAG);
-  const hasRevoke = args.includes(REVOKE_FLAG);
-  const hasView = args.includes(VIEW_FLAG) || (!hasIssue && !hasRevoke);
-  
-  // Get institution address
-  let insIndex = args.indexOf(INS_FLAG);
+  // Get institution address based on name
   let institutionName = "Hong Kong University"; // Default
   let institutionSigner = institution1; // Default
   
-  if (insIndex !== -1 && insIndex + 1 < args.length) {
-    const insName = args.slice(insIndex + 1).join(" ");
+  if (INSTITUTION) {
+    const insName = INSTITUTION;
     
     if (insName.toLowerCase().includes("hku") || insName.toLowerCase().includes("hong kong")) {
       institutionName = "Hong Kong University";
@@ -67,26 +60,22 @@ async function main() {
   }
   
   // Get certificate ID if specified
-  let certificateId;
-  const certIndex = args.indexOf(CERT_FLAG);
-  if (certIndex !== -1 && certIndex + 1 < args.length) {
-    certificateId = args[certIndex + 1];
-  }
+  let certificateId = CERT_ID;
   
   // Store certificates created in this session
   let sessionCertificates = [];
   
   // 1. Issue Certificate
-  if (hasIssue) {
+  if (ISSUE) {
     console.log("\n1. Issuing Certificate");
     console.log("-------------------------------------------");
     
-    // Get student details from command line or use defaults
-    const studentName = getArgValue(STUDENT_FLAG, "John Doe");
+    // Get student details from environment variables
+    const studentName = STUDENT;
     const studentId = "S" + Math.floor(Math.random() * 900000 + 100000); // Random student ID
-    const degree = getArgValue(DEGREE_FLAG, "Bachelor of Science");
-    const major = getArgValue(MAJOR_FLAG, "Computer Science");
-    const gradeStr = getArgValue(GRADE_FLAG, "85");
+    const degree = DEGREE;
+    const major = MAJOR;
+    const gradeStr = GRADE;
     const grade = Math.floor(parseFloat(gradeStr) * 100); // Convert to contract format (e.g., 3.85 -> 385)
     
     const today = new Date();
@@ -128,6 +117,7 @@ async function main() {
         
         console.log(`✓ SUCCESS: Certificate issued with ID: ${certificateId}`);
         console.log(`\nIMPORTANT: Save this certificate ID for future reference or revocation.`);
+        console.log(`Example: CERT_ID=${certificateId} VIEW=true npx hardhat run scripts/institution-actions.js --network localhost`);
       } else {
         console.log(`✓ SUCCESS: Certificate issued, but couldn't retrieve the ID`);
       }
@@ -137,7 +127,7 @@ async function main() {
   }
   
   // 2. View Certificate
-  if (hasView && certificateId) {
+  if (VIEW && certificateId) {
     console.log("\n2. Viewing Certificate Details");
     console.log("-------------------------------------------");
     
@@ -181,7 +171,7 @@ async function main() {
         }
       }
     }
-  } else if (hasView && !certificateId && sessionCertificates.length > 0) {
+  } else if (VIEW && !certificateId && sessionCertificates.length > 0) {
     // If view is requested with no certificate ID but we created one, show it
     console.log("\n2. Viewing Certificate Details");
     console.log("-------------------------------------------");
@@ -204,12 +194,12 @@ async function main() {
     } catch (error) {
       console.log(`❌ ERROR: Failed to get certificate details: ${error.message.split('\n')[0]}`);
     }
-  } else if (hasView && !certificateId) {
-    console.log("\nNo certificate ID specified for viewing. Use -cert [certificateId] to view details.");
+  } else if (VIEW && !certificateId) {
+    console.log("\nNo certificate ID specified for viewing. Use CERT_ID environment variable to specify a certificate ID.");
   }
   
   // 3. Revoke Certificate
-  if (hasRevoke && certificateId) {
+  if (REVOKE && certificateId) {
     console.log("\n3. Revoking Certificate");
     console.log("-------------------------------------------");
     
@@ -232,45 +222,21 @@ async function main() {
     } catch (error) {
       console.log(`❌ ERROR: Failed to revoke certificate: ${error.message.split('\n')[0]}`);
     }
-  } else if (hasRevoke && !certificateId) {
-    console.log("\nNo certificate ID specified for revocation. Use -cert [certificateId] to revoke a certificate.");
+  } else if (REVOKE && !certificateId) {
+    console.log("\nNo certificate ID specified for revocation. Use CERT_ID environment variable to specify a certificate ID.");
   }
   
-  // Show help if no valid action was performed
-  if ((!hasIssue && !hasRevoke && !hasView) || (hasView && !certificateId && sessionCertificates.length === 0)) {
-    showHelp();
+  // Show usage information if no valid action was performed
+  if ((!ISSUE && !REVOKE && !VIEW) || (VIEW && !certificateId && sessionCertificates.length === 0)) {
+    console.log("\nUsage with environment variables:");
+    console.log("-------------------------------------------");
+    console.log("Example commands:");
+    console.log("ISSUE=true STUDENT=\"Jane Smith\" DEGREE=\"Master of Science\" MAJOR=\"Data Science\" GRADE=3.95 INSTITUTION=HKU npx hardhat run scripts/institution-actions.js --network localhost");
+    console.log("VIEW=true CERT_ID=0x123abc... npx hardhat run scripts/institution-actions.js --network localhost");
+    console.log("REVOKE=true CERT_ID=0x123abc... INSTITUTION=HKU npx hardhat run scripts/institution-actions.js --network localhost");
   }
   
   console.log("\nInstitution actions completed!");
-}
-
-// Helper function to get argument value
-function getArgValue(flag, defaultValue) {
-  const index = args.indexOf(flag);
-  if (index !== -1 && index + 1 < args.length) {
-    return args.slice(index + 1).join(" ");
-  }
-  return defaultValue;
-}
-
-function showHelp() {
-  console.log("\nUsage Options:");
-  console.log("-------------------------------------------");
-  console.log("npx hardhat run scripts/institution-actions.js --network localhost [options]");
-  console.log("\nOptions:");
-  console.log("  -issue                Issue a new certificate");
-  console.log("  -revoke               Revoke an existing certificate");
-  console.log("  -view                 View certificate details (default)");
-  console.log("  -cert [id]            Specify certificate ID (required for revoke/view)");
-  console.log("  -ins [name]           Specify institution name (e.g., HKU, CityU)");
-  console.log("  -student [name]       Student name for certificate issuance");
-  console.log("  -degree [name]        Degree name for certificate issuance");
-  console.log("  -major [name]         Major for certificate issuance");
-  console.log("  -grade [value]        Grade/GPA for certificate issuance (e.g., 3.85)");
-  console.log("\nExamples:");
-  console.log("  npx hardhat run scripts/institution-actions.js --network localhost -issue -student \"Jane Smith\" -degree \"Master of Science\" -major \"Data Science\" -grade 3.95 -ins HKU");
-  console.log("  npx hardhat run scripts/institution-actions.js --network localhost -view -cert 0x123abc...");
-  console.log("  npx hardhat run scripts/institution-actions.js --network localhost -revoke -cert 0x123abc...");
 }
 
 // Error handling wrapper

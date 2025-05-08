@@ -1,10 +1,56 @@
-# Interactive Console Guide
+# Academic Record Verification - Console Guide
 
-This guide shows how to manually interact with the Academic Record Verification contract through the Hardhat console.
+This guide shows how to:
+1. Manually interact with the Academic Record Verification contract through the Hardhat console
+2. Use the role-based scripts with environment variables
 
-## Starting the Console
+## Role-Based Scripts (Recommended)
 
-In your Docker container:
+The system features dedicated scripts for each role, controlled via environment variables:
+
+### Owner Actions
+
+```bash
+# Authorize an institution
+AUTH=true INSTITUTION="Hong Kong University" npx hardhat run scripts/owner-actions.js --network localhost
+
+# Revoke an institution
+REVOKE=true INSTITUTION=CityU npx hardhat run scripts/owner-actions.js --network localhost
+
+# View institutions (default action)
+VIEW=true npx hardhat run scripts/owner-actions.js --network localhost
+```
+
+### Institution Actions
+
+```bash
+# Issue a certificate
+ISSUE=true STUDENT="Jane Smith" DEGREE="Master of Science" MAJOR="Data Science" GRADE=3.95 INSTITUTION=HKU npx hardhat run scripts/institution-actions.js --network localhost
+
+# View a certificate
+VIEW=true CERT_ID=0x123abc... npx hardhat run scripts/institution-actions.js --network localhost
+
+# Revoke a certificate
+REVOKE=true CERT_ID=0x123abc... INSTITUTION=HKU npx hardhat run scripts/institution-actions.js --network localhost
+```
+
+### Public Verification
+
+```bash
+# Verify a certificate
+VERIFY=true CERT_ID=0x123abc... npx hardhat run scripts/public-verification.js --network localhost
+
+# Set up demo certificates
+SETUP=true npx hardhat run scripts/public-verification.js --network localhost
+```
+
+## Interactive Console Use
+
+For advanced users, direct console interaction is available:
+
+### Starting the Console
+
+In your terminal:
 
 ```bash
 cd /usr/app/AcademicRecordVerification
@@ -17,7 +63,7 @@ If you experience issues with npx, use this alternative:
 node -e "require('hardhat').run('console', { network: 'localhost' })"
 ```
 
-## Setup Contract Connection
+### Setup Contract Connection
 
 Once in the console, connect to your deployed contract:
 
@@ -36,9 +82,9 @@ console.log("Institution 2:", institution2.address);
 console.log("Student:", student1.address);
 ```
 
-## Common Operations by Role
+### Common Operations by Role
 
-### As Owner (Contract Admin)
+#### As Owner (Contract Admin)
 
 ```javascript
 // Authorize an institution
@@ -59,7 +105,7 @@ await contract.revokeInstitution(institution1.address);
 console.log("Institution revoked");
 ```
 
-### As an Institution
+#### As an Institution
 
 ```javascript
 // Switch to institution account
@@ -110,7 +156,7 @@ if (certEvents.length > 0) {
 }
 ```
 
-### As Anyone (Public Verification)
+#### As Anyone (Public Verification)
 
 ```javascript
 // Verify a certificate (replace with actual certificate ID)
