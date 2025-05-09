@@ -51,12 +51,21 @@ async function main() {
   
   console.log(`Using institution: ${institutionName} (${institutionSigner.address})`);
   
-  // For demo purposes, ensure institution is authorized
+  // Check if institution is authorized (instead of automatically authorizing it)
   try {
-    await contract.authorizeInstitution(institutionSigner.address, institutionName);
-    console.log("✓ Institution authorized (or was already authorized)");
+    // Get the institution's authorization status
+    const institution = await contract.authorizedInstitutions(institutionSigner.address);
+    if (institution.isAuthorized) {
+      console.log("✓ Institution is authorized");
+    } else {
+      console.log("❌ WARNING: Institution is NOT authorized");
+      if (ISSUE) {
+        console.log("  Certificate issuance will likely fail. Please authorize this institution first.");
+        console.log(`  Run: AUTH=true INSTITUTION="${institutionName}" npx hardhat run scripts/owner-actions.js --network localhost`);
+      }
+    }
   } catch (error) {
-    console.log(`Note: ${error.message.split('\n')[0]}`);
+    console.log(`❓ ERROR: Failed to check institution authorization: ${error.message.split('\n')[0]}`);
   }
   
   // Get certificate ID if specified
@@ -133,8 +142,39 @@ async function main() {
     
     console.log(`\nGetting details for certificate ID: ${certificateId}...`);
     try {
+      // First, try to verify if the certificate is valid
+      let isValid = false;
+      let validationMessage = "";
+      let institutionStatus = "";
+      
+      try {
+        const verification = await contract.verifyCertificate(certificateId);
+        isValid = verification.isValid;
+        
+        // Get institution status
+        const institutionAddr = verification.institutionAddress;
+        const instDetails = await contract.authorizedInstitutions(institutionAddr);
+        institutionStatus = instDetails.isAuthorized ? "Active" : "Revoked/Unauthorized";
+        
+        if (!isValid) {
+          if (!instDetails.isAuthorized) {
+            validationMessage = "The issuing institution has been revoked or is no longer authorized";
+          } else {
+            validationMessage = "Certificate has been revoked by the issuing institution";
+          }
+        }
+      } catch (verifyError) {
+        validationMessage = "Could not verify certificate validity: " + verifyError.message.split('\n')[0];
+      }
+      
+      // Then get the detailed certificate data
       const cert = await contract.connect(institutionSigner).getCertificate(certificateId);
-      console.log(`Certificate Details:`);
+      
+      console.log(`\n${isValid ? "✅ VALID CERTIFICATE" : "❌ INVALID CERTIFICATE"}`);
+      if (validationMessage) {
+        console.log(`Note: ${validationMessage}`);
+      }
+      console.log(`\nCertificate Details:`);
       console.log(`- Student Name: ${cert[0]}`);
       console.log(`- Student ID: ${cert[1]}`);
       console.log(`- Degree: ${cert[2]}`);
@@ -142,12 +182,29 @@ async function main() {
       console.log(`- Issue Date: ${cert[4]}`);
       console.log(`- Graduation Date: ${cert[5]}`);
       console.log(`- Grade: ${Number(cert[6]) / 100}`);
-      console.log(`- Issuing Institution: ${cert[9]}`);
-      console.log(`- Institution Name: ${cert[10]}`);
-      console.log(`- Is Revoked: ${cert[7]}`);
-      console.log(`- Revocation Reason: ${cert[8] || "N/A"}`);
+      console.log(`- Issuing Institution: ${cert[10]}`); // Show institution name only
+      console.log(`- Institution Status: ${institutionStatus}`);
+      console.log(`- Certificate Status: ${cert[7] ? "Revoked" : "Not Revoked"}`);
+      
+      if (cert[7]) { // If certificate is revoked (separate from institution revocation)
+        console.log(`- Revocation Reason: ${cert[8]}`);
+      }
+      
+      // Only show technical details in verbose mode (could be added as an env variable later)
+      const VERBOSE = false;
+      if (VERBOSE) {
+        console.log(`\nTechnical Details (for administrators):`);
+        console.log(`- Institution Address: ${cert[9]}`);
+        console.log(`- Certificate ID: ${certificateId}`);
+      }
     } catch (error) {
-      console.log(`❌ ERROR: Failed to get certificate details: ${error.message.split('\n')[0]}`);
+      // Check if this is a "certificate does not exist" error or something else
+      if (error.message && error.message.includes("Certificate does not exist")) {
+        console.log(`❌ ERROR: Certificate with ID ${certificateId} does not exist`);
+      } else {
+        console.log(`❌ ERROR: Failed to get certificate details: ${error.message.split('\n')[0]}`);
+        console.log("  This could be due to network issues or an invalid certificate ID format.");
+      }
       
       // If we can't find the requested certificate but we created one in this session, show it
       if (sessionCertificates.length > 0 && !certificateId) {
@@ -178,8 +235,39 @@ async function main() {
     
     console.log(`\nShowing latest certificate created in this session: ${sessionCertificates[0]}`);
     try {
+      // First, try to verify if the certificate is valid
+      let isValid = false;
+      let validationMessage = "";
+      let institutionStatus = "";
+      
+      try {
+        const verification = await contract.verifyCertificate(sessionCertificates[0]);
+        isValid = verification.isValid;
+        
+        // Get institution status
+        const institutionAddr = verification.institutionAddress;
+        const instDetails = await contract.authorizedInstitutions(institutionAddr);
+        institutionStatus = instDetails.isAuthorized ? "Active" : "Revoked/Unauthorized";
+        
+        if (!isValid) {
+          if (!instDetails.isAuthorized) {
+            validationMessage = "The issuing institution has been revoked or is no longer authorized";
+          } else {
+            validationMessage = "Certificate has been revoked by the issuing institution";
+          }
+        }
+      } catch (verifyError) {
+        validationMessage = "Could not verify certificate validity: " + verifyError.message.split('\n')[0];
+      }
+      
+      // Then get the detailed certificate data
       const cert = await contract.connect(institutionSigner).getCertificate(sessionCertificates[0]);
-      console.log(`Certificate Details:`);
+      
+      console.log(`\n${isValid ? "✅ VALID CERTIFICATE" : "❌ INVALID CERTIFICATE"}`);
+      if (validationMessage) {
+        console.log(`Note: ${validationMessage}`);
+      }
+      console.log(`\nCertificate Details:`);
       console.log(`- Student Name: ${cert[0]}`);
       console.log(`- Student ID: ${cert[1]}`);
       console.log(`- Degree: ${cert[2]}`);
@@ -187,10 +275,21 @@ async function main() {
       console.log(`- Issue Date: ${cert[4]}`);
       console.log(`- Graduation Date: ${cert[5]}`);
       console.log(`- Grade: ${Number(cert[6]) / 100}`);
-      console.log(`- Issuing Institution: ${cert[9]}`);
-      console.log(`- Institution Name: ${cert[10]}`);
-      console.log(`- Is Revoked: ${cert[7]}`);
-      console.log(`- Revocation Reason: ${cert[8] || "N/A"}`);
+      console.log(`- Issuing Institution: ${cert[10]}`); // Show institution name only
+      console.log(`- Institution Status: ${institutionStatus}`);
+      console.log(`- Certificate Status: ${cert[7] ? "Revoked" : "Not Revoked"}`);
+      
+      if (cert[7]) { // If certificate is revoked (separate from institution revocation)
+        console.log(`- Revocation Reason: ${cert[8]}`);
+      }
+      
+      // Only show technical details in verbose mode (could be added as an env variable later)
+      const VERBOSE = false;
+      if (VERBOSE) {
+        console.log(`\nTechnical Details (for administrators):`);
+        console.log(`- Institution Address: ${cert[9]}`);
+        console.log(`- Certificate ID: ${sessionCertificates[0]}`);
+      }
     } catch (error) {
       console.log(`❌ ERROR: Failed to get certificate details: ${error.message.split('\n')[0]}`);
     }

@@ -190,16 +190,22 @@ The tests are organized into three main categories:
 - **Authorization**: Tests the owner's ability to authorize institutions ✓
 - **Revocation**: Tests the owner's ability to revoke institutions ✓
 - **Access Control**: Tests that non-owners cannot authorize institutions ✓
+- **Owner Privilege Protection**: Tests that unauthorized accounts cannot perform owner operations ✓
 
 #### 2. Certificate Issuance Tests
 - **Authorized Issuance**: Tests that authorized institutions can issue certificates ✓
 - **Unauthorized Issuance**: Tests that unauthorized institutions cannot issue certificates ✓
+- **Post-Revocation Issuance Prevention**: Tests that revoked institutions cannot issue new certificates ✓
 
 #### 3. Certificate Verification and Revocation Tests
 - **Verification**: Tests that certificates from authorized institutions verify correctly ✓
 - **Self-Revocation**: Tests that institutions can revoke their own certificates ✓
 - **Unauthorized Revocation**: Tests that non-issuing institutions cannot revoke others' certificates ✓
 - **Institution Revocation Effect**: Tests that revoking an institution invalidates all its certificates ✓
+- **Revoked Institution Restrictions**: Tests that revoked institutions cannot revoke certificates ✓
+- **Authorization Lifecycle**: Tests the full cycle of authorization, revocation, and reauthorization ✓
+
+The test suite provides a comprehensive validation of the system's access control mechanisms and ensures that all security features work as expected.
 
 ### Testing Methodology
 
@@ -224,10 +230,13 @@ This comprehensive test suite ensures all contract features work correctly and s
 
 ## Security Measures
 
-- **Access Control**: Role-based permissions
+- **Access Control**: Role-based permissions with strict authorization checks
 - **Input Validation**: Extensive validation on all inputs
 - **Event Logging**: Transparent activity tracking
 - **Secure Ownership**: OpenZeppelin's Ownable pattern
+- **Comprehensive Authorization Checks**: All operations verify current authorization status to prevent unauthorized actions
+- **Revocation Safeguards**: Revoked institutions cannot perform any privileged operations
+- **Immutable History**: All certificates remain on chain with proper status indicators, even when institutions are revoked
 
 ## Getting Started
 

@@ -141,22 +141,51 @@ async function verifyAndDisplayCertificate(contract, verifier, certificateId) {
   console.log(`\nVerifying certificate ID: ${certificateId}`);
   
   try {
-    // Verify certificate
-    const verification = await contract.connect(verifier).verifyCertificate(certificateId);
+    // First try to verify certificate validity
+    let isValid = false;
+    let validationMessage = "";
+    let institutionStatus = "";
+    let institutionName = "";
     
-    console.log(`\nVerification Result:`);
-    console.log(`- Is Valid: ${verification.isValid ? "✓ VALID" : "❌ INVALID"}`);
-    console.log(`- Issuing Institution Address: ${verification.institutionAddress}`);
-    console.log(`- Institution Name: ${verification.institutionName}`);
-    
-    // If verification passes, get more details
-    if (verification.isValid) {
-      console.log(`\nRetrieving certificate details...`);
+    try {
+      // Verify certificate
+      const verification = await contract.connect(verifier).verifyCertificate(certificateId);
+      isValid = verification.isValid;
+      institutionName = verification.institutionName;
       
+      // Get institution status
+      const institutionAddr = verification.institutionAddress;
+      const instDetails = await contract.authorizedInstitutions(institutionAddr);
+      institutionStatus = instDetails.isAuthorized ? "Active" : "Revoked/Unauthorized";
+      
+      if (!isValid) {
+        if (!instDetails.isAuthorized) {
+          validationMessage = "The issuing institution has been revoked or is no longer authorized";
+        } else {
+          validationMessage = "Certificate has been revoked by the issuing institution";
+        }
+      }
+    } catch (verifyError) {
+      if (verifyError.message.includes("Certificate does not exist")) {
+        validationMessage = "This certificate does not exist on the blockchain";
+      } else {
+        validationMessage = "Could not verify validity: " + verifyError.message.split('\n')[0];
+      }
+    }
+    
+    // Try to get certificate details regardless of validity
+    try {
       // Get certificate details
       const cert = await contract.connect(verifier).getCertificate(certificateId);
       
-      console.log(`Certificate Details:`);
+      // Display verification result prominently
+      console.log(`\n${isValid ? "✅ VALID CERTIFICATE" : "❌ INVALID CERTIFICATE"}`);
+      if (validationMessage) {
+        console.log(`Note: ${validationMessage}`);
+      }
+      
+      // Display certificate details
+      console.log(`\nCertificate Details:`);
       console.log(`- Student Name: ${cert[0]}`);
       console.log(`- Student ID: ${cert[1]}`);
       console.log(`- Degree: ${cert[2]}`);
@@ -164,33 +193,45 @@ async function verifyAndDisplayCertificate(contract, verifier, certificateId) {
       console.log(`- Issue Date: ${cert[4]}`);
       console.log(`- Graduation Date: ${cert[5]}`);
       console.log(`- Grade: ${Number(cert[6]) / 100}`);
-    } else {
-      console.log(`\nThis certificate is invalid and cannot be trusted.`);
+      console.log(`- Issuing Institution: ${cert[10]}`);
+      console.log(`- Institution Status: ${institutionStatus}`);
+      console.log(`- Certificate Status: ${cert[7] ? "Revoked" : "Not Revoked"}`);
       
-      // Get certificate details to see why it might be invalid
-      try {
-        const cert = await contract.connect(verifier).getCertificate(certificateId);
+      if (cert[7]) { // If certificate is revoked (separate from institution revocation)
+        console.log(`- Revocation Reason: ${cert[8]}`);
+      }
+      
+      // Only show technical details in verbose mode
+      const VERBOSE = false;
+      if (VERBOSE) {
+        console.log(`\nTechnical Details (for administrators):`);
+        console.log(`- Institution Address: ${cert[9]}`);
+        console.log(`- Certificate ID: ${certificateId}`);
+      }
+    } catch (error) {
+      // If we couldn't get certificate details but got validation info earlier
+      if (validationMessage) {
+        console.log(`\n❌ INVALID CERTIFICATE`);
+        console.log(`Note: ${validationMessage}`);
         
-        if (cert[7]) { // isRevoked
-          console.log(`Reason for invalidity: Certificate was REVOKED`);
-          console.log(`Revocation reason: ${cert[8]}`);
-        } else {
-          console.log(`Reason for invalidity: The issuing institution may have been revoked`);
+        if (institutionName) {
+          console.log(`\nPartial Details:`);
+          console.log(`- Issuing Institution: ${institutionName}`);
+          console.log(`- Institution Status: ${institutionStatus}`);
         }
-      } catch (error) {
+      } else {
+        // Complete failure
         if (error.message.includes("Certificate does not exist")) {
-          console.log(`Reason for invalidity: This certificate does not exist on the blockchain`);
+          console.log(`\n❌ INVALID CERTIFICATE`);
+          console.log(`Note: This certificate does not exist on the blockchain`);
         } else {
-          console.log(`Unable to get additional details: ${error.message.split('\n')[0]}`);
+          console.log(`\n❌ ERROR: ${error.message.split('\n')[0]}`);
+          console.log("  This could be due to network issues or an invalid certificate ID format.");
         }
       }
     }
   } catch (error) {
-    if (error.message.includes("Certificate does not exist")) {
-      console.log(`❌ ERROR: This certificate does not exist on the blockchain`);
-    } else {
-      console.log(`❌ ERROR: ${error.message.split('\n')[0]}`);
-    }
+    console.log(`\n❌ ERROR: ${error.message.split('\n')[0]}`);
   }
   
   console.log("\nImportant notes:");
