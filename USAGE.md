@@ -1,8 +1,50 @@
 # Academic Record Verification - Usage Instructions
 
-## Project Setup in Docker
+## Getting Started
 
-> **Note:** If you haven't set up Docker yet, please follow the [Docker Setup Instructions](./README.md#docker-setup) in the README first to create the required Docker image and container.
+### Clone the Project
+
+First, you need to clone the project repository to your local machine:
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/AcademicRecordVerification.git
+
+# Navigate to the project directory
+cd AcademicRecordVerification
+```
+
+## Docker Setup
+
+This project includes a Dockerfile to ensure a consistent development environment. Follow these steps to set up Docker:
+
+### Prerequisites
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed on your machine
+
+### Setup Steps
+
+1. **Build the Docker Image**
+   ```bash
+   # Build the Docker image using the provided Dockerfile
+   docker build -t fite2010:lab1 .
+   ```
+
+2. **Create and Start the Container**
+   ```bash
+   # Create a container with the correct name for all commands to work
+   docker create -it --name fite2010-lab1 -v ${PWD}:/usr/app fite2010:lab1
+   
+   # Start the container
+   docker start fite2010-lab1
+   ```
+
+3. **Enter the Container**
+   ```bash
+   # Access the container shell
+   docker exec -it fite2010-lab1 bash
+   ```
+
+## Project Setup in Docker
 
 Once you have the Docker environment set up, follow these steps to deploy and test the Academic Record Verification system:
 
