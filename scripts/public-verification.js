@@ -18,8 +18,13 @@ async function main() {
   // Get signers
   const [owner, institution1, institution2, public1, public2] = await hre.ethers.getSigners();
   
+  // Function to abbreviate addresses for security
+  function abbreviateAddress(address) {
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  }
+  
   console.log("Account Information:");
-  console.log(`- Public User: ${public1.address}`);
+  console.log(`- Public User: ${abbreviateAddress(public1.address)}`);
   console.log("");
 
   // Determine which action to perform

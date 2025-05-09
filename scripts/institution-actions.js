@@ -24,10 +24,15 @@ async function main() {
   // Get signers
   const [owner, institution1, institution2, institution3] = await hre.ethers.getSigners();
   
+  // Function to abbreviate addresses for security
+  function abbreviateAddress(address) {
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  }
+  
   console.log("Account Information:");
-  console.log(`- Owner/System Admin: ${owner.address}`);
-  console.log(`- Default Institution (HKU): ${institution1.address}`);
-  console.log(`- Default Institution (CityU): ${institution2.address}`);
+  console.log(`- Owner/System Admin: ${abbreviateAddress(owner.address)}`);
+  console.log(`- Default Institution (HKU): ${abbreviateAddress(institution1.address)}`);
+  console.log(`- Default Institution (CityU): ${abbreviateAddress(institution2.address)}`);
   console.log("");
 
   // Get institution address based on name
@@ -49,7 +54,7 @@ async function main() {
     }
   }
   
-  console.log(`Using institution: ${institutionName} (${institutionSigner.address})`);
+  console.log(`Using institution: ${institutionName} (${abbreviateAddress(institutionSigner.address)})`);
   
   // Check if institution is authorized (instead of automatically authorizing it)
   try {

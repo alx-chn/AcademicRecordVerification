@@ -19,10 +19,15 @@ async function main() {
   // Get signers
   const [owner, institution1, institution2, institution3, institution4] = await hre.ethers.getSigners();
   
+  // Function to abbreviate addresses for security
+  function abbreviateAddress(address) {
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  }
+  
   console.log("Account Information:");
-  console.log(`- Owner/System Admin: ${owner.address}`);
-  console.log(`- Default Institution 1: ${institution1.address}`);
-  console.log(`- Default Institution 2: ${institution2.address}`);
+  console.log(`- Owner/System Admin: ${abbreviateAddress(owner.address)}`);
+  console.log(`- Default Institution 1: ${abbreviateAddress(institution1.address)}`);
+  console.log(`- Default Institution 2: ${abbreviateAddress(institution2.address)}`);
   console.log("");
 
   // Get institution address based on name
@@ -48,7 +53,7 @@ async function main() {
 
   // Authorize institution
   if (AUTH && institutionName) {
-    console.log(`\nAuthorizing Institution: ${institutionName} (${institutionAddress})`);
+    console.log(`\nAuthorizing Institution: ${institutionName} (${abbreviateAddress(institutionAddress)})`);
     console.log("-------------------------------------------");
     
     try {
@@ -58,7 +63,7 @@ async function main() {
       );
       await tx.wait();
       
-      console.log(`✓ SUCCESS: Institution authorized - ${institutionAddress} as ${institutionName}`);
+      console.log(`✓ SUCCESS: Institution authorized - ${institutionName}`);
     } catch (error) {
       console.log(`❌ ERROR: Failed to authorize institution: ${error.message.split('\n')[0]}`);
     }
@@ -66,14 +71,14 @@ async function main() {
   
   // Revoke institution
   if (REVOKE && institutionName) {
-    console.log(`\nRevoking Institution: ${institutionName} (${institutionAddress})`);
+    console.log(`\nRevoking Institution: ${institutionName} (${abbreviateAddress(institutionAddress)})`);
     console.log("-------------------------------------------");
     
     try {
       const tx = await contract.revokeInstitution(institutionAddress);
       await tx.wait();
       
-      console.log(`✓ SUCCESS: Institution revoked - ${institutionAddress} (${institutionName})`);
+      console.log(`✓ SUCCESS: Institution revoked - ${institutionName}`);
       
       // Verify institution is now revoked by attempting to issue a certificate
       try {
@@ -130,7 +135,7 @@ async function main() {
     }
     
     for (const inst of institutionsToCheck) {
-      console.log(`\nChecking authorization for: ${inst.name} (${inst.address})`);
+      console.log(`\nChecking authorization for: ${inst.name} (${abbreviateAddress(inst.address)})`);
       try {
         // Issue a temporary certificate to test if institution is authorized
         const issueTx = await contract.connect(inst.signer).issueCertificate(

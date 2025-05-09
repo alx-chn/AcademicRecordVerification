@@ -145,6 +145,7 @@ contract AcademicRecordVerification is Ownable {
         require(certificate.issuingInstitution != address(0), "Certificate does not exist");
         require(certificate.issuingInstitution == msg.sender, "Only the issuing institution can revoke this certificate");
         require(!certificate.isRevoked, "Certificate is already revoked");
+        require(authorizedInstitutions[msg.sender].isAuthorized, "Institution must be authorized to revoke certificates");
         
         certificate.isRevoked = true;
         certificate.revocationReason = reason;
