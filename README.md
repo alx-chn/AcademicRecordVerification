@@ -11,6 +11,9 @@ A blockchain-based smart contract system for issuing, verifying, and managing ac
     - [For Contract Owner](#for-contract-owner)
     - [For Educational Institutions](#for-educational-institutions)
     - [For Employers/Third Parties](#for-employersthird-parties)
+  - [Docker Setup](#docker-setup)
+    - [Prerequisites](#prerequisites)
+    - [Setup Steps](#setup-steps)
   - [Complete Workflow](#complete-workflow)
     - [Development Workflow](#development-workflow)
     - [Demo Workflow](#demo-workflow)
@@ -51,6 +54,70 @@ Traditional academic credential verification is centralized, slow, and vulnerabl
 ### For Employers/Third Parties
 - Verify certificate authenticity
 - Access certificate details
+
+## Docker Setup
+
+To ensure a consistent development environment, this project uses Docker. Follow these steps to set up the same Docker configuration mentioned in the usage instructions:
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed on your machine
+
+### Setup Steps
+
+1. **Create a Dockerfile**
+
+   Create a file named `Dockerfile` with the following content:
+
+   ```dockerfile
+   FROM node:16
+
+   WORKDIR /usr/app
+
+   # Install dependencies
+   RUN npm install -g npm@latest
+   RUN npm install -g hardhat
+
+   # Set up shell
+   RUN apt-get update && apt-get install -y vim
+
+   # Keep container running
+   CMD ["/bin/bash"]
+   ```
+
+2. **Build the Docker Image**
+
+   ```bash
+   # Build with the exact same name and tag as in the usage instructions
+   docker build -t fite2010:lab1 .
+   ```
+
+3. **Create and Start the Container**
+
+   ```bash
+   # Create a container with the same name used in the usage instructions
+   docker create -it --name fite2010-lab1 -v ${PWD}:/usr/app fite2010:lab1
+   
+   # Start the container
+   docker start fite2010-lab1
+   ```
+
+4. **Enter the Container**
+
+   ```bash
+   # Access the container shell
+   docker exec -it fite2010-lab1 bash
+   ```
+
+5. **Set Up the Project Inside Docker**
+
+   Inside the container:
+   ```bash
+   cd /usr/app/AcademicRecordVerification
+   npm install
+   ```
+
+With this setup, you'll have a Docker environment that matches the one referenced in the usage instructions, allowing you to use all the commands exactly as written in the documentation.
 
 ## Complete Workflow
 

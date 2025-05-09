@@ -2,13 +2,15 @@
 
 ## Project Setup in Docker
 
-Since you already have Docker set up, follow these steps to deploy and test the Academic Record Verification system:
+> **Note:** If you haven't set up Docker yet, please follow the [Docker Setup Instructions](./README.md#docker-setup) in the README first to create the required Docker image and container.
+
+Once you have the Docker environment set up, follow these steps to deploy and test the Academic Record Verification system:
 
 ### Step 1: Set up the Project in Docker
 
 ```bash
 # Start and access the Docker container
-docker start -ai fite2010-lab1
+docker start fite2010-lab1
 docker exec -it fite2010-lab1 bash
 
 # Navigate to the project directory
