@@ -60,6 +60,87 @@ The project includes three main ways to interact with the contract:
    - Public: `VERIFY=true CERT_ID=0x123... npx hardhat run scripts/public-verification.js --network localhost`
 3. **Test Suite**: Comprehensive tests showing all functionality with `npx hardhat test`
 
+## Complete Workflow
+
+### Development Workflow
+
+1. **Compile Smart Contract**
+   ```bash
+   npx hardhat compile
+   ```
+   This compiles the Solidity contract to bytecode that can be deployed to the blockchain.
+
+2. **Start Local Blockchain**
+   ```bash
+   npx hardhat node
+   ```
+   This starts a local Ethereum blockchain for testing with pre-funded accounts.
+
+3. **Deploy Contract**
+   ```bash
+   npx hardhat run scripts/deploy.js --network localhost
+   ```
+   This deploys the contract to your local blockchain and outputs the contract address.
+
+4. **Update Contract Address**
+   ```bash
+   node scripts/update-contract-address.js 0xYourContractAddress
+   ```
+   This updates all script files with the deployed contract address so they know where to find the contract on the blockchain.
+
+5. **Interact with Contract**
+   - Authorize institutions (as owner)
+   - Issue certificates (as institution)
+   - Verify certificates (as public user)
+
+### Demo Workflow
+
+The `demo.js` script demonstrates the complete workflow:
+
+1. **Account Setup**: `ethers.getSigners()` creates test accounts with private keys for different roles (owner, institutions, public users)
+2. **Contract Deployment**: Contract is deployed with the first account as owner
+3. **Institution Authorization**: Owner authorizes specific institution addresses
+4. **Certificate Issuance**: Authorized institutions issue certificates to students
+5. **Certificate Verification**: Public users verify certificates
+6. **Certificate Revocation**: Institutions or owner can revoke certificates when needed
+
+Each step simulates a real transaction on the blockchain with proper access control and event emission.
+
+### Real-World Implementation
+
+In a real-world deployment:
+
+1. **Account Creation**: 
+   - System administrator creates an Ethereum account (becomes the contract owner)
+   - Each educational institution creates their own Ethereum account
+   - Students and employers don't need blockchain accounts to view certificates
+
+2. **Contract Deployment**:
+   - System administrator deploys the contract to a production blockchain network (e.g., Ethereum mainnet or a dedicated educational blockchain)
+   - Contract address is recorded and shared with institutions
+
+3. **Institution Onboarding**:
+   - Institutions submit their Ethereum address to the system administrator
+   - Administrator verifies institution identity through real-world verification
+   - Administrator calls `authorizeInstitution()` with the verified institution address
+
+4. **Certificate Issuance**:
+   - Institutions use their private key to sign transactions that issue certificates
+   - Each certificate is tied to a specific student's identifier
+   - Blockchain transaction fees (gas) are paid by the institutions
+
+5. **Certificate Verification**:
+   - Students receive a certificate ID and verification link
+   - Employers use the verification link to check certificate validity without needing a blockchain account
+   - The system reads from the blockchain to verify the certificate and institution status
+
+6. **Security Model**:
+   - Private keys control access: Only the key holder can perform authorized actions
+   - Public addresses enable verification: Anyone can verify a certificate's authenticity
+   - Role separation: Institutions cannot impersonate each other or the system administrator
+
+This system ensures that credentials cannot be forged or tampered with, while making verification accessible to anyone with the certificate ID.
+
 ## Troubleshooting
 
 For troubleshooting help, see the [Troubleshooting section](./USAGE.md#troubleshooting) in USAGE.md.
