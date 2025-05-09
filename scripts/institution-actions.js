@@ -151,6 +151,7 @@ async function main() {
       let isValid = false;
       let validationMessage = "";
       let institutionStatus = "";
+      let certificateExists = true;
       
       try {
         const verification = await contract.verifyCertificate(certificateId);
@@ -169,69 +170,82 @@ async function main() {
           }
         }
       } catch (verifyError) {
-        validationMessage = "Could not verify certificate validity: " + verifyError.message.split('\n')[0];
+        if (verifyError.message && verifyError.message.includes("Certificate does not exist")) {
+          certificateExists = false;
+          validationMessage = "This certificate ID does not exist on the blockchain";
+        } else {
+          validationMessage = "Could not verify certificate validity: " + verifyError.message.split('\n')[0];
+        }
       }
       
       // Then get the detailed certificate data
-      const cert = await contract.connect(institutionSigner).getCertificate(certificateId);
-      
-      console.log(`\n${isValid ? "✅ VALID CERTIFICATE" : "❌ INVALID CERTIFICATE"}`);
-      if (validationMessage) {
-        console.log(`Note: ${validationMessage}`);
-      }
-      console.log(`\nCertificate Details:`);
-      console.log(`- Student Name: ${cert[0]}`);
-      console.log(`- Student ID: ${cert[1]}`);
-      console.log(`- Degree: ${cert[2]}`);
-      console.log(`- Major: ${cert[3]}`);
-      console.log(`- Issue Date: ${cert[4]}`);
-      console.log(`- Graduation Date: ${cert[5]}`);
-      console.log(`- Grade: ${Number(cert[6]) / 100}`);
-      console.log(`- Issuing Institution: ${cert[10]}`); // Show institution name only
-      console.log(`- Institution Status: ${institutionStatus}`);
-      console.log(`- Certificate Status: ${cert[7] ? "Revoked" : "Not Revoked"}`);
-      
-      if (cert[7]) { // If certificate is revoked (separate from institution revocation)
-        console.log(`- Revocation Reason: ${cert[8]}`);
-      }
-      
-      // Only show technical details in verbose mode (could be added as an env variable later)
-      const VERBOSE = false;
-      if (VERBOSE) {
-        console.log(`\nTechnical Details (for administrators):`);
-        console.log(`- Institution Address: ${cert[9]}`);
-        console.log(`- Certificate ID: ${certificateId}`);
-      }
-    } catch (error) {
-      // Check if this is a "certificate does not exist" error or something else
-      if (error.message && error.message.includes("Certificate does not exist")) {
-        console.log(`❌ ERROR: Certificate with ID ${certificateId} does not exist`);
-      } else {
-        console.log(`❌ ERROR: Failed to get certificate details: ${error.message.split('\n')[0]}`);
-        console.log("  This could be due to network issues or an invalid certificate ID format.");
-      }
-      
-      // If we can't find the requested certificate but we created one in this session, show it
-      if (sessionCertificates.length > 0 && !certificateId) {
-        console.log(`\nShowing latest certificate created in this session instead: ${sessionCertificates[0]}`);
-        try {
-          const cert = await contract.connect(institutionSigner).getCertificate(sessionCertificates[0]);
-          console.log(`Certificate Details:`);
-          console.log(`- Student Name: ${cert[0]}`);
-          console.log(`- Student ID: ${cert[1]}`);
-          console.log(`- Degree: ${cert[2]}`);
-          console.log(`- Major: ${cert[3]}`);
-          console.log(`- Issue Date: ${cert[4]}`);
-          console.log(`- Graduation Date: ${cert[5]}`);
-          console.log(`- Grade: ${Number(cert[6]) / 100}`);
-          console.log(`- Issuing Institution: ${cert[9]}`);
-          console.log(`- Institution Name: ${cert[10]}`);
-          console.log(`- Is Revoked: ${cert[7]}`);
-          console.log(`- Revocation Reason: ${cert[8] || "N/A"}`);
-        } catch (error) {
+      try {
+        const cert = await contract.connect(institutionSigner).getCertificate(certificateId);
+        
+        console.log(`\n${isValid ? "✅ VALID CERTIFICATE" : "❌ INVALID CERTIFICATE"}`);
+        if (validationMessage) {
+          console.log(`Note: ${validationMessage}`);
+        }
+        console.log(`\nCertificate Details:`);
+        console.log(`- Student Name: ${cert[0]}`);
+        console.log(`- Student ID: ${cert[1]}`);
+        console.log(`- Degree: ${cert[2]}`);
+        console.log(`- Major: ${cert[3]}`);
+        console.log(`- Issue Date: ${cert[4]}`);
+        console.log(`- Graduation Date: ${cert[5]}`);
+        console.log(`- Grade: ${Number(cert[6]) / 100}`);
+        console.log(`- Issuing Institution: ${cert[10]}`); // Show institution name only
+        console.log(`- Institution Status: ${institutionStatus}`);
+        console.log(`- Certificate Status: ${cert[7] ? "Revoked" : "Not Revoked"}`);
+        
+        if (cert[7]) { // If certificate is revoked (separate from institution revocation)
+          console.log(`- Revocation Reason: ${cert[8]}`);
+        }
+        
+        // Only show technical details in verbose mode (could be added as an env variable later)
+        const VERBOSE = false;
+        if (VERBOSE) {
+          console.log(`\nTechnical Details (for administrators):`);
+          console.log(`- Institution Address: ${cert[9]}`);
+          console.log(`- Certificate ID: ${certificateId}`);
+        }
+      } catch (error) {
+        // Check if this is a "certificate does not exist" error or something else
+        if (error.message && error.message.includes("Certificate does not exist")) {
+          console.log(`\n❌ CERTIFICATE NOT FOUND`);
+          console.log(`Note: This certificate ID does not exist on the blockchain`);
+          console.log(`Please check that the certificate ID is correct.`);
+          
+          // If we can't find the requested certificate but we created one in this session, show it
+          if (sessionCertificates.length > 0) {
+            console.log(`\nShowing latest certificate created in this session instead: ${sessionCertificates[0]}`);
+            try {
+              const cert = await contract.connect(institutionSigner).getCertificate(sessionCertificates[0]);
+              console.log(`Certificate Details:`);
+              console.log(`- Student Name: ${cert[0]}`);
+              console.log(`- Student ID: ${cert[1]}`);
+              console.log(`- Degree: ${cert[2]}`);
+              console.log(`- Major: ${cert[3]}`);
+              console.log(`- Issue Date: ${cert[4]}`);
+              console.log(`- Graduation Date: ${cert[5]}`);
+              console.log(`- Grade: ${Number(cert[6]) / 100}`);
+              console.log(`- Issuing Institution: ${cert[10]}`);
+              console.log(`- Institution Status: institutionStatus ? "Active" : "Revoked/Unauthorized"`);
+              console.log(`- Certificate Status: ${cert[7] ? "Revoked" : "Not Revoked"}`);
+              if (cert[7]) { // If certificate is revoked
+                console.log(`- Revocation Reason: ${cert[8]}`);
+              }
+            } catch (error) {
+              console.log(`❌ ERROR: Failed to get certificate details: ${error.message.split('\n')[0]}`);
+            }
+          }
+        } else {
           console.log(`❌ ERROR: Failed to get certificate details: ${error.message.split('\n')[0]}`);
+          console.log("  This could be due to network issues or an invalid certificate ID format.");
         }
       }
+    } catch (error) {
+      console.log(`❌ ERROR: Unexpected error: ${error.message.split('\n')[0]}`);
     }
   } else if (VIEW && !certificateId && sessionCertificates.length > 0) {
     // If view is requested with no certificate ID but we created one, show it

@@ -151,6 +151,7 @@ async function verifyAndDisplayCertificate(contract, verifier, certificateId) {
     let validationMessage = "";
     let institutionStatus = "";
     let institutionName = "";
+    let certificateExists = true;
     
     try {
       // Verify certificate
@@ -172,7 +173,8 @@ async function verifyAndDisplayCertificate(contract, verifier, certificateId) {
       }
     } catch (verifyError) {
       if (verifyError.message.includes("Certificate does not exist")) {
-        validationMessage = "This certificate does not exist on the blockchain";
+        certificateExists = false;
+        validationMessage = "This certificate ID does not exist on the blockchain";
       } else {
         validationMessage = "Could not verify validity: " + verifyError.message.split('\n')[0];
       }
@@ -216,19 +218,26 @@ async function verifyAndDisplayCertificate(contract, verifier, certificateId) {
     } catch (error) {
       // If we couldn't get certificate details but got validation info earlier
       if (validationMessage) {
-        console.log(`\n❌ INVALID CERTIFICATE`);
-        console.log(`Note: ${validationMessage}`);
-        
-        if (institutionName) {
-          console.log(`\nPartial Details:`);
-          console.log(`- Issuing Institution: ${institutionName}`);
-          console.log(`- Institution Status: ${institutionStatus}`);
+        if (!certificateExists) {
+          console.log(`\n❌ CERTIFICATE NOT FOUND`);
+          console.log(`Note: ${validationMessage}`);
+          console.log(`Please check that the certificate ID is correct.`);
+        } else {
+          console.log(`\n❌ INVALID CERTIFICATE`);
+          console.log(`Note: ${validationMessage}`);
+          
+          if (institutionName) {
+            console.log(`\nPartial Details:`);
+            console.log(`- Issuing Institution: ${institutionName}`);
+            console.log(`- Institution Status: ${institutionStatus}`);
+          }
         }
       } else {
         // Complete failure
         if (error.message.includes("Certificate does not exist")) {
-          console.log(`\n❌ INVALID CERTIFICATE`);
-          console.log(`Note: This certificate does not exist on the blockchain`);
+          console.log(`\n❌ CERTIFICATE NOT FOUND`);
+          console.log(`Note: This certificate ID does not exist on the blockchain`);
+          console.log(`Please check that the certificate ID is correct.`);
         } else {
           console.log(`\n❌ ERROR: ${error.message.split('\n')[0]}`);
           console.log("  This could be due to network issues or an invalid certificate ID format.");
